@@ -1,0 +1,16 @@
+﻿  context.c
+  egl_context.c
+  init.c
+  input.c
+  monitor.c
+  vulkan.c
+  wgl_context.c
+  win32_init.c
+  win32_joystick.c
+  win32_monitor.c
+  win32_time.c
+  win32_tls.c
+  win32_window.c
+  window.c
+  Generating Code...
+  glfw-VS2015.vcxproj -> C:\Users\aldof\Desktop\chai3d-3.2.0\extras\GLFW\lib\Debug\x64\glfw.lib
