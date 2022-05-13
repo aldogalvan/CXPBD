@@ -25,12 +25,11 @@ INCLUDE_DIRECTORIES (
         src
 )
 
-
 # static library source files
 file (GLOB_RECURSE CXPBD_SOURCES src/*.cpp src/*.h)
 
 # static library
-add_library (CXPBD STATIC ${CXPBD_SOURCES} src/CXPBDTool.cpp src/CXPBDTool.h src/CXPBDAABB.cpp src/CXPBDAABB.h)
+add_library (CXPBD STATIC ${CXPBD_SOURCES})
 
 #include LibIGL
 target_include_directories(CXPBD PUBLIC ${PROJECT_SOURCE_DIR}/external/libigl-main )

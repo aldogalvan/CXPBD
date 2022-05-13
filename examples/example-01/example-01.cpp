@@ -1,11 +1,14 @@
+
 //------------------------------------------------------------------------------
 #include "chai3d.h"
+#include "../../external/libigl-main/include/igl/readOBJ.h"
 //------------------------------------------------------------------------------
 #include "../extras/GLFW/include/GLFW/glfw3.h"
 #include "../../src/CXPBDDeformableObject.h"
 #include "../../src/CXPBDSolver.h"
+#include "../../src/CXPBDToolMesh.h"
 #include "../../src/CXPBDTool.h"
-#include "../../external/libigl-main/include/igl/readOBJ.h"
+#include "../../src/CXPBDContinuousCollisionDetection.h"
 #include "tetgen.h"
 #include <Eigen/Dense>
 #include <set>
@@ -45,7 +48,10 @@ bool mirroredDisplay = false;
 cXPBDDeformableMesh* xpbd_mesh;
 
 // a virtual tool representing the haptic device in the scene
-cXPBDTool* tool;
+cXPBDToolMesh* tool;
+
+// a new tool representing the haptic device
+cXPBDTool* newTool;
 
 // a world that contains all objects of the virtual environment
 cWorld* world;
@@ -115,7 +121,7 @@ cGenericTool* haptic_tool;
 void createTetrahedralMesh(cXPBDDeformableMesh* a_xpbdMesh);
 
 // function to create the tool
-void importSphere(cXPBDTool* a_tool);
+void importSphere(cXPBDToolMesh* a_tool);
 
 // callback when the window display is resized
 void windowSizeCallback(GLFWwindow* a_window, int a_width, int a_height);
@@ -252,7 +258,7 @@ int main(int argc, char* argv[])
     world->addChild(camera);
 
     // position and orient the camera
-    camera->set(cVector3d(0.9, 0.0, 0.6),    // camera position (eye)
+    camera->set(cVector3d(0.9, 0.0, -0.5),    // camera position (eye)
                 cVector3d(0.0, 0.0, 0.0),    // lookat position (target)
                 cVector3d(0.0, 0.0, 1.0));   // direction of the (up) vector
 
@@ -305,9 +311,16 @@ int main(int argc, char* argv[])
     // get access to the first available haptic device found
     handler->getDevice(hapticDevice, 0);
 
-    // retrieve information about the current haptic device
-    cHapticDeviceInfo hapticDeviceInfo = hapticDevice->getSpecifications();
+    // open a connection to haptic device
+    hapticDevice->open();
 
+    // calibrate device (if necessary)
+    hapticDevice->calibrate();
+
+
+
+    // retrieve information about the current haptic device
+    cHapticDeviceInfo info = hapticDevice->getSpecifications();
 
 
     //--------------------------------------------------------------------------
@@ -317,35 +330,58 @@ int main(int argc, char* argv[])
     // creates the deformable objects
     xpbd_mesh = new cXPBDDeformableMesh();
     createTetrahedralMesh(xpbd_mesh);
-    xpbd_mesh->setLocalPos(Eigen::Vector3d(0,0,5));
-    xpbd_mesh->scaleObject(0.1);
+    xpbd_mesh->setLocalPos(Eigen::Vector3d(0,0,0.5));
+    xpbd_mesh->scaleObject(0.2);
     xpbd_mesh->connectToChai3d();
 
     Eigen::MatrixXd vel(xpbd_mesh->numVerts(),3);
     vel.setZero();
     xpbd_mesh->setVelocities(vel);
-    //chai3d_mesh->computeAllEdges();
-    //chai3d_mesh->setShowEdges(true);
-    //chai3d_mesh->m_edgeLineColor = cColorf(1,0,0,0);
-    //chai3d_mesh->setShowTriangles(true);
 
     xpbd_mesh->constrain_edge_lengths(0.01);
     xpbd_mesh->constrain_tetrahedron_volumes(0.01);
-    //xpbd_mesh->constrain_neohookean_elasticity_potential(100000,0.5);
+    //xpbd_mesh->constrain_neohookean_elasticity_potential(10000000,0.5);
 
     // creates the tool
-    tool = new cXPBDTool(world);
-    // connect the haptic device to the virtual tool
-    tool->m_tool->setHapticDevice(hapticDevice);
+    tool = new cXPBDToolMesh();
+    newTool = new cXPBDTool(world);
+    world->addChild(newTool);
+    newTool->setHapticDevice(hapticDevice);
+
+    // define the radius of the tool (sphere)
+    double toolRadius = 0.01;
+
+    // define a radius for the tool
+    newTool->setRadius(toolRadius);
+
+    // hide the device sphere. only show proxy.
+    newTool->setShowContactPoints(true, false);
+
+    // create a white cursor
+    newTool->m_hapticPoint->m_sphereProxy->m_material->setWhite();
 
     importSphere(tool);
     world->addChild(tool);
     world->addChild(xpbd_mesh);
 
+    tool->setLocalPos(Eigen::Vector3d(0,0,-.2));
+    tool->computeCentroid();
 
     // set last positions
     xpbd_mesh->setVerticesLast();
-    tool->setVerticesLast();
+
+    // get max vertex
+    Eigen::MatrixXd tem = xpbd_mesh->positions();
+    int max_vertex = 0; double min = -1000;
+    for (int i = 0 ; i < xpbd_mesh->numVerts(); i++)
+    {
+        double min_temp = tem(i,2);
+        if (min_temp > min )
+        {
+            max_vertex = i;
+        }
+    }
+
 
     //--------------------------------------------------------------------------
     // WIDGETS
@@ -400,7 +436,7 @@ int main(int argc, char* argv[])
 
         // Solver
         solve(xpbd_mesh, tool, Eigen::MatrixXd::Zero(xpbd_mesh->numVerts(),
-                                                     3),0.01,10,5,true);
+                                                     3),0.005,10,5,true);
 
         updateGraphics();
 
@@ -514,6 +550,8 @@ void close(void)
     // wait for graphics and haptics loops to terminate
     while (!simulationFinished) { cSleepMs(100); }
 
+    hapticDevice->close();
+
     // delete resources
     delete hapticsThread;
     delete world;
@@ -581,14 +619,20 @@ void updateHaptics(void)
         // signal frequency counter
         freqCounterHaptics.signal(1);
 
-        // compute global reference frames for each object
-        world->computeGlobalPositions(true);
+        // read position and velocity then update
+        cVector3d position;
+        cVector3d velocity;
+        cVector3d force(0,0,0);
 
-        // update position and orientation of tool
-        tool->m_tool->updateFromDevice();
+        hapticDevice->getPosition(position);
+        hapticDevice->getLinearVelocity(velocity);
 
-        // update the visualizer
+        tool->setHapticPos(position.eigen());
+        tool->setHapticVel(velocity.eigen());
 
+        auto bb = xpbd_mesh->bb();
+
+        hapticDevice->setForce(force);
 
     }
 
@@ -604,7 +648,7 @@ void createTetrahedralMesh(cXPBDDeformableMesh* a_xpbdMesh)
     // TetGen switches
     char TETGEN_SWITCHES[] = "pq1.414a0.002";
 
-    if (input.load_off(RESOURCE_PATH("../../resources/ducky/duck-200.off")))
+    if (input.load_off(RESOURCE_PATH("../../resources/ducky/cube.off")))
     {
         // use TetGen to tetrahedralize our mesh
         tetgenio output;
@@ -622,13 +666,14 @@ void createTetrahedralMesh(cXPBDDeformableMesh* a_xpbdMesh)
             //a_chai3dMesh->newVertex(point);
 
             points.row(p) = Eigen::RowVector3d(output.pointlist[pi + 0],
-                                                       output.pointlist[pi + 1],
-                                                       output.pointlist[pi + 2]);
+                                               output.pointlist[pi + 1],
+                                               output.pointlist[pi + 2]);
 
         }
 
         // sets the vertices of the mesh
         a_xpbdMesh->setVertices(points);
+        a_xpbdMesh->buildAABBBoundaryBox(points);
 
         Eigen::MatrixXi faces(output.numberoftrifaces,3);
 
@@ -718,17 +763,18 @@ void createTetrahedralMesh(cXPBDDeformableMesh* a_xpbdMesh)
 
     Eigen::VectorXd mass;
     mass.setOnes(a_xpbdMesh->numVerts());
-    a_xpbdMesh->setMass(mass*0.0001);
+    mass *= .00001;
+    a_xpbdMesh->setMass(mass);
 }
 
-void importSphere(cXPBDTool* a_tool)
+void importSphere(cXPBDToolMesh* a_tool)
 {
     Eigen::MatrixX3d V;
     Eigen::MatrixX3i F;
     igl::readOBJ(RESOURCE_PATH("../../resources/sphere/sphere.obj"), V, F);
     a_tool->setVertices(V);
     a_tool->setFaces(F);
-    a_tool->scaleObject(0.05);
+    a_tool->scaleObject(0.025);
     a_tool->connectToChai3d();
 }
-//------------------------------------------------------------------------------
+//--------------------

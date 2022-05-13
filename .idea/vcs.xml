@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/eigen" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/glad" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/glfw" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/imgui" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/libigl-imgui" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/tetgen" vcs="Git" />
+  </component>
+</project>

@@ -6,6 +6,7 @@
 #include "CXPBDEdgeLengthConstraint.h"
 #include "CXPBDVolumeConstraint.h"
 #include "CXPBDNeoHookeanConstraint.h"
+#include "CXPBDBendingConstraint.h"
 
 void cXPBDDeformableMesh::connectToChai3d(void)
 {
@@ -43,6 +44,8 @@ Eigen::Vector3d cXPBDDeformableMesh::computeCentroid(void)
     }
 
     sum /= num_vertices;
+
+    return sum;
 }
 
 void cXPBDDeformableMesh::setLocalPos(Eigen::Vector3d a_pos)
@@ -97,6 +100,65 @@ void cXPBDDeformableMesh::constrain_tetrahedron_volumes(scalar_type const compli
     {
         auto const element = elements.row(i);
         auto constraint    = std::make_unique<cXPBDVolumeConstraint>(
+                std::initializer_list<std::uint32_t>{
+                        static_cast<std::uint32_t>(element(0)),
+                        static_cast<std::uint32_t>(element(1)),
+                        static_cast<std::uint32_t>(element(2)),
+                        static_cast<std::uint32_t>(element(3))},
+                positions,
+                compliance);
+
+        this->constraints().push_back(std::move(constraint));
+    }
+}
+
+void cXPBDDeformableMesh::constrain_hinge_bending(const scalar_type compliance)
+{
+    auto const& positions = this->p0();
+    auto const& F = this->faces();
+    std::map<std::pair<int, int>, std::vector<int>> edgemap;
+    int nfaces = F.rows();
+
+    for (int i = 0; i < nfaces; i++) {
+        for (int j = 0; j < 3; j++) {
+            int nextj = (j + 1) % 3;
+            int v1 = F(i, j);
+            int v2 = F(i, nextj);
+            if (v1 > v2)
+                std::swap(v1, v2);
+            edgemap[std::pair<int, int>(v1, v2)].push_back(i);
+        }
+    }
+
+    int nhinges = 0;
+    for (auto it : edgemap) {
+        if (it.second.size() == 2)
+            nhinges++;
+    }
+    H_.resize(nhinges, 4);
+    int idx = 0;
+    for (auto it : edgemap) {
+        if (it.second.size() != 2)
+            continue;
+        std::set<int> hingeverts;
+        for (int j = 0; j < 3; j++) {
+            hingeverts.insert(F(it.second[0], j));
+            hingeverts.insert(F(it.second[1], j));
+        }
+        int colidx = 0;
+        for (auto v : hingeverts) {
+            H_(idx, colidx) = v;
+            colidx++;
+        }
+        idx++;
+    }
+
+    auto elements = H_;
+
+    for (auto i = 0u; i < elements.rows(); ++i)
+    {
+        auto const element = elements.row(i);
+        auto constraint    = std::make_unique<cXPBDBendingConstraint>(
                 std::initializer_list<std::uint32_t>{
                         static_cast<std::uint32_t>(element(0)),
                         static_cast<std::uint32_t>(element(1)),

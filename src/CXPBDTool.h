@@ -3,7 +3,6 @@
 //
 
 #include "chai3d.h"
-#include "CXPBDConstraint.h"
 #include "CXPBDAABB.h"
 #include <Eigen/Core>
 
@@ -12,7 +11,7 @@ using namespace chai3d;
 #ifndef CXPBD_CXPBDTOOL_H
 #define CXPBD_CXPBDTOOL_H
 
-class cXPBDTool : public cMesh
+class cXPBDTool : public cToolCursor
 {
 
 public:
@@ -21,8 +20,8 @@ public:
     using velocities_type  = Eigen::MatrixX3d;
     using faces_type       = Eigen::MatrixXi;
     using elements_type    = Eigen::MatrixXi;
-    using constraints_type = std::vector<std::unique_ptr<cXPBDConstraint>>;
-    using scalar_type      = typename cXPBDConstraint::scalar_type;
+    using gradient_type    = Eigen::Vector3d;
+    using scalar_type      = double;
 
     //--------------------------------------------------------------------------
     // CONSTRUCTOR & DESTRUCTOR:
@@ -31,9 +30,9 @@ public:
 public:
 
     //! Constructor of cMesh.
-    cXPBDTool(cWorld* a_parentWorld) : cMesh()
+    cXPBDTool(cWorld *aParentWorld) : cToolCursor(aParentWorld)
     {
-        m_tool = new cGenericTool(a_parentWorld);
+
     };
 
     //! Destructor of cMesh.
@@ -43,14 +42,11 @@ public:
     // PUBLIC METHODS - GENERAL
     //--------------------------------------------------------------------------
 
-    positions_type& positions() { return p_; }
-    positions_type& positions_last() {return plast_;};
-    int& numVerts(){return num_vertices;}
-    faces_type& faces() { return F_; }
-    int& numFaces(){return num_faces;}
-    velocities_type& velocity() { return v_; }
-    masses_type& mass() { return m_; }
-    std::shared_ptr<AABBNode>& bb(){return bb_;}
+    gradient_type& positions() { return p_; }
+    gradient_type& positions_last() {return plast_;}
+    gradient_type& velocity() { return v_; }
+    scalar_type const & mass() { return m_; }
+    scalar_type const & radius() {return r_;}
 
     // This method connects the mesh to chai3d
     void connectToChai3d(void);
@@ -58,25 +54,8 @@ public:
     // This method updates the chai3d mesh
     void updateChai3d(void);
 
-    // This method computes the centroid
-    Eigen::Vector3d computeCentroid();
-
     // This method translates the object
     void setLocalPos(Eigen::Vector3d a_pos);
-
-    // This method sets the vertices for the object
-    void setVertices(positions_type a_vertices)
-    {
-        p0_ = a_vertices;
-        p_ = a_vertices;
-        num_vertices = a_vertices.rows();
-    };
-
-    // This method sets the last set of vertices
-    void setVerticesLast(void)
-    {
-        plast_ = p_;
-    }
 
     // This method scales the object
     void scaleObject(double a_scale);
@@ -87,65 +66,46 @@ public:
         v_ = a_velocity;
     };
 
-    // This method sets the outside faces for this object
-    void setFaces(faces_type a_faces)
-    {
-        F_ = a_faces;
-        num_faces = a_faces.rows();
-    };
 
     // This method sets the mass of the deformable object
-    void setMass(Eigen::VectorXd a_mass)
+    void setMass(double a_mass)
     {
         m_ = a_mass;
     }
 
-    // This method builds a AABB boundary box
-    void buildAABBBoundaryBox(void)
+
+    void setHapticPos(Eigen::Vector3d a_pos)
     {
-        bb_ = buildAABB(plast_,p_,F_);
-    }
-
-    std::tuple<Eigen::MatrixX3d, // old position
-            Eigen::MatrixX3d> // new position
-    getPBDInfo()
-    {
-        int nverts = num_vertices;
-
-        Eigen::MatrixXd oldPos(nverts, 3);
-        Eigen::MatrixXd newPos(nverts, 3);
-
-        oldPos = positions();
-        newPos = positions();
-
-        return std::make_tuple(oldPos, newPos);
+        last_proxy_pos = proxy_pos;
+        proxy_pos = a_pos;
     }
 
     void updatePos()
     {
-        Eigen::Vector3d pos = m_tool->getDeviceLocalPos().eigen();
-        setLocalPos(pos);
+        plast_ = p_;
+        setLocalPos(proxy_pos);
+    }
+
+
+    void projectPos(double t)
+    {
+        p_ = plast_ + t*(p_ - plast_);
     }
 
 public:
-    cGenericTool* m_tool;
-
-protected:
-    positions_type const& p0() const { return p0_; }
+    bool collision;
+    gradient_type normal;
+    double depth;
 
 private:
-    positions_type p0_;            ///< Rest positions
-    positions_type p_;             ///< Positions
-    positions_type plast_;         ///< Last positions
-    int num_vertices;              ///< Number of vertices
-    faces_type F_;                 ///< Faces
-    int num_faces;                 ///< Number of faces
-    masses_type m_;                ///< Per-vertex mass_when_unfixed
-    velocities_type v_;            ///< Per-vertex velocity
-    std::shared_ptr<AABBNode> bb_; ///< Boundary box for this object
-
-
-
+    gradient_type p_;            ///< Rest positions
+    gradient_type plast_;         ///< Last positions
+    gradient_type v_;            ///< Per-vertex velocity
+    gradient_type vlast_;        ///< Last velocity
+    gradient_type proxy_pos;      ///< Haptic position
+    gradient_type last_proxy_pos; ///< Last haptic position
+    scalar_type m_;                ///< Per-vertex mass_when_unfixed
+    scalar_type r_;                ///< Radius of the sphere
 };
 
 #endif //CXPBD_CXPBDTOOL_H

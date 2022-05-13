@@ -66,6 +66,12 @@ public:
     // This method computes the collision
     void computeCollision(void);
 
+    // This method sets the ounding box
+    void buildAABBBoundaryBox(positions_type pdes_)
+    {
+        bb_ = buildAABB(p_,pdes_,F_);
+    }
+
     // This method computes the centroid
     Eigen::Vector3d computeCentroid();
 
@@ -144,6 +150,9 @@ public:
     // This method constraints the volume
     void constrain_tetrahedron_volumes(scalar_type const compliance = 0.0);
 
+    // This method constrains the hinges
+    void constrain_hinge_bending(scalar_type const compliance = 0.0);
+
     // This method constrains the elastic potential
     void constrain_green_strain_elastic_potential(
             scalar_type young_modulus,
@@ -155,12 +164,6 @@ public:
             scalar_type young_modulus,
             scalar_type poisson_ratio,
             scalar_type const compliance = 0.0);
-
-    // This method builds a AABB boundary box
-    void buildAABBBoundaryBox(void)
-    {
-        bb_ = buildAABB(plast_,p_,F_);
-    }
 
 
     std::tuple<Eigen::MatrixX3d, // old position
@@ -179,9 +182,11 @@ public:
     }
 
 protected:
+
     positions_type const& p0() const { return p0_; }
 
 private:
+
     positions_type p0_;            ///< Rest positions
     positions_type plast_;         ///< Last set of positions
     positions_type p_;             ///< Positions
@@ -192,6 +197,8 @@ private:
     index_type num_edges;          ///< Number of edges
     elements_type T_;              ///< Tetrahedra
     index_type num_tetrahedra;     ///< Number of tetrahedra
+    elements_type H_;              ///< Hinges
+    index_type num_hinges;         ///< Number of hinges
     masses_type m_;                ///< Per-vertex mass_when_unfixed
     velocities_type v_;            ///< Per-vertex velocity
     constraints_type constraints_; ///< PBD constraints
@@ -201,6 +208,7 @@ private:
     index_type in_size;            ///< Size of inside set
     set<index_type> outside;       ///< Set of outside vertice
     index_type out_size;           ///< Size of outside set
+
 };
 
 #endif //CXPBD_CXPBDDEFORMABLEOBJECT_H

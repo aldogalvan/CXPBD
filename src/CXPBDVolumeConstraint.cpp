@@ -71,8 +71,10 @@ void cXPBDVolumeConstraint::project(
             -(C + alpha_tilde * lagrange) / (weighted_sum_of_gradients + alpha_tilde);
 
     lagrange += delta_lagrange;
+
     p.row(v0) += w0 * grad0 * delta_lagrange;
     p.row(v1) += w1 * grad1 * delta_lagrange;
     p.row(v2) += w2 * grad2 * delta_lagrange;
     p.row(v3) += w3 * grad3 * delta_lagrange;
+
 }

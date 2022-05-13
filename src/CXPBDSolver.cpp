@@ -8,36 +8,48 @@
 
 void applyVertexVsBodyConstraints(const ColInfo& col_info, Eigen::MatrixXd& p,
                                   cXPBDDeformableMesh* model,
-                                  cXPBDTool* tool)
+                                  cXPBDToolMesh* tool)
 {
-    const auto& vertCollisions = col_info.faceCollisions;
+    const auto& vertCollisions = col_info.vertCollisions;
     const auto& p_tool = tool->positions();
+    const auto& p_tool_last = tool->positions_last();
+    // const auto& p_tool = tool->positions_next();
     const auto& f_def = model->faces();
-    const auto& f_tool = tool->faces();
+    // const auto& f_tool = tool->faces();
 
     for (int i = 0; i < tool->numVerts(); i++){
         if (!vertCollisions[i].empty()){
             for (auto &col : vertCollisions[i]){
-                Eigen::Vector3d pos = p_tool.row(i);
+                Eigen::Vector3d pos = p_tool.row(i) ;
                 Eigen::Vector3i face = f_def.row(col);
                 Eigen::Vector3d p1 = p.row(face(0));
                 Eigen::Vector3d p2 = p.row(face(1));
                 Eigen::Vector3d p3 = p.row(face(2));
-                auto p0 = (p1 +p2+p3)/3;
+                auto p0 = (p1 + p2 + p3) / 3;
                 Eigen::Vector3d norm = (p2 - p1).cross(p3 - p1).normalized();
                 double j = (pos - p0).dot(norm);
-                if (j < 0)
+
+                // std::cout << j << "," << norm.transpose() << std::endl;
+
+                if ( j < 0 )
                 {
-                    p.row(face(0)) +=  j * norm.transpose();
-                    p.row(face(1)) +=  j * norm.transpose();
-                    p.row(face(2)) +=  j * norm.transpose();
+                    p.row(face(0)) -=  2 * j * norm.transpose();
+                    p.row(face(1)) -=  2 * j * norm.transpose();
+                    p.row(face(2)) -=  2 * j * norm.transpose();
                 }
                 else
                 {
-                    p.row(face(0)) -=  j * norm.transpose();
-                    p.row(face(1)) -=  j * norm.transpose();
-                    p.row(face(2)) -=  j * norm.transpose();
+                    p.row(face(0)) +=  2 * j * norm.transpose();
+                    p.row(face(1)) +=  2 * j * norm.transpose();
+                    p.row(face(2)) +=  2 * j * norm.transpose();
                 }
+
+                // std::cout << j << std::endl;
+                //p.row(face(0)) +=  2 * j * norm.transpose();
+                //p.row(face(1)) +=  2 * j * norm.transpose();
+                //p.row(face(2)) +=  2 * j * norm.transpose();
+
+
             }
         }
     }
@@ -45,10 +57,12 @@ void applyVertexVsBodyConstraints(const ColInfo& col_info, Eigen::MatrixXd& p,
 
 void applyFaceVsVertexConstraints(const ColInfo& col_info, Eigen::MatrixXd& p,
                                   cXPBDDeformableMesh* model,
-                                  cXPBDTool* tool)
+                                  cXPBDToolMesh* tool)
 {
+
     const auto& faceCollisions = col_info.faceCollisions;
     auto& p_tool = tool->positions();
+    // const auto& p_tool = tool->positions_next();
     auto& f_def = model->faces();
     auto& f_tool = tool->faces();
     for (int i = 0; i < tool->numFaces(); i++){
@@ -65,18 +79,20 @@ void applyFaceVsVertexConstraints(const ColInfo& col_info, Eigen::MatrixXd& p,
                 if (j < 0) {
                     p.row(i) -=  j * norm.transpose();
                 }
-                else
-                {
-                    p.row(i) +=  j * norm.transpose();
+                else{
+                    //p.row(i) -=  j * norm.transpose();
                 }
+
             }
         }
     }
 }
 
+
+
 void solve(
         cXPBDDeformableMesh* model,
-        cXPBDTool* tool,
+        cXPBDToolMesh* tool,
         Eigen::MatrixX3d const& fext,
         double timestep,
         std::uint32_t iterations,
@@ -84,12 +100,12 @@ void solve(
         bool gravityEnabled
         )
 {
+
     auto const num_iterations = iterations / substeps;
     double dt                 = timestep / static_cast<double>(substeps);
     auto const& constraints   = model->constraints();
     auto const J              = constraints.size();
     std::vector<double> lagrange_multipliers(J, 0.);
-
 
     for (auto s = 0u; s < substeps; ++s)
     {
@@ -98,34 +114,43 @@ void solve(
 
         tool->updatePos();
 
+        // step the graphics forward (test????)
+        // tool->setPnext(dt);
+        // tool->buildAABBBoundaryBox();
+
         auto const& m = model->mass();
         Eigen::MatrixX3d a = fext.array().colwise() / m.array();
 
         if (gravityEnabled)
         {
             Eigen::RowVector3d g(0,0,-9.8);
-            for (int i = 0u; i < model->numVerts() ; i++) {
-                a.row(i) += g;
-            }
+            a.rowwise() += g;
         }
 
         // explicit euler step
         auto vexplicit = v + dt * a;
         Eigen::MatrixXd p = x + dt * vexplicit;
 
-
-
         // generate collision constraints here ...
-        const auto& collisions = findCollisions(model, tool);
-        applyVertexVsBodyConstraints(collisions,p, model,tool);
-        applyFaceVsVertexConstraints(collisions,p, model,tool);
+        double t;
+        bool collision = false;
+        const auto& collisions = findCollisions(p,x, model, tool, t , collision);
 
-        // update solution
-        for (auto i = 0u; i < x.rows(); ++i)
+        if (collision == true)
         {
-            if ( p(i,2) < -0.1 )
-                p(i,2) = -0.1;
+            applyVertexVsBodyConstraints(collisions, p, model, tool);
+            tool->projectPos(t);
         }
+
+        for (auto i = 0u ; i < model->numVerts() ; i++)
+        {
+            if (p(i,2) < -.1)
+            {
+                p(i,2) = -.1;
+            }
+        }
+
+        // applyFaceVsVertexConstraints(collisions,p, model,tool);
 
         // sequential gauss seidel type solve
         std::fill(lagrange_multipliers.begin(), lagrange_multipliers.end(), 0.0);
@@ -138,9 +163,14 @@ void solve(
             }
         }
 
-        // set last positions
-        model->setVerticesLast();
-        tool->setVerticesLast();
+        double lagrange_sum = 0;
+        
+        for (auto it = lagrange_multipliers.begin() ; it != lagrange_multipliers.end(); it++)
+        {
+            lagrange_sum += *it;
+        }
+
+        //std::cout << lagrange_sum << std::endl;
 
         // update solution
         for (auto i = 0u; i < x.rows(); ++i)
@@ -149,8 +179,8 @@ void solve(
             x.row(i) = p.row(i);
         }
 
-        // friction or other non-conservative forces here ...
         model->updateChai3d();
+        tool->updateChai3d();
     }
 }
 

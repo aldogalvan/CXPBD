@@ -9,6 +9,7 @@
 #include "CXPBDDeformableObject.h"
 #include "CXPBDContinuousCollisionDetection.h"
 #include "CXPBDSolver.h"
+#include "CXPBDToolMesh.h"
 #include "CXPBDTool.h"
 #include "chai3d.h"
 
@@ -16,7 +17,7 @@ using namespace chai3d;
 
     void solve(
             cXPBDDeformableMesh* model,
-            cXPBDTool* tool,
+            cXPBDToolMesh* tool,
             Eigen::MatrixX3d const& fext,
             double dt                = 0.01,
             std::uint32_t iterations = 10,

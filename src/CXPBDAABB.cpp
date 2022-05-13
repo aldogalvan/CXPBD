@@ -36,6 +36,7 @@ struct AABBNode {
 };
 
 class NodeComparator {
+
 public:
     NodeComparator(int axis)
             : axis(axis)
