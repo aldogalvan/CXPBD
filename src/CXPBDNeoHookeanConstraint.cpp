@@ -11,8 +11,9 @@ cXPBDNeoHookeanConstraint::cXPBDNeoHookeanConstraint(
         positions_type const& p,
         scalar_type young_modulus,
         scalar_type poisson_ratio,
-        scalar_type const alpha)
-        : base_type(indices, alpha), V0_{0.}, DmInv_{}, mu_{}, lambda_{}
+        scalar_type const alpha,
+        scalar_type const beta)
+        : base_type(indices, alpha, beta), V0_{0.}, DmInv_{}, mu_{}, lambda_{}
 {
     assert(indices.size() == 4u);
 
@@ -39,6 +40,8 @@ cXPBDNeoHookeanConstraint::cXPBDNeoHookeanConstraint(
 
 void cXPBDNeoHookeanConstraint::project(
         positions_type& p,
+        positions_type& v,
+        positions_type& p0,
         masses_type const& m,
         scalar_type& lagrange,
         scalar_type const dt) const
@@ -52,6 +55,11 @@ void cXPBDNeoHookeanConstraint::project(
     auto const p2 = p.row(v2);
     auto const p3 = p.row(v3);
     auto const p4 = p.row(v4);
+
+    auto const pdot1 = v.row(v1);
+    auto const pdot2 = v.row(v2);
+    auto const pdot3 = v.row(v3);
+    auto const pdot4 = v.row(v4);
 
     auto const w1 = 1. / m(v1);
     auto const w2 = 1. / m(v2);
@@ -163,15 +171,27 @@ void cXPBDNeoHookeanConstraint::project(
 
     scalar_type const C           = V0 * psi;
     scalar_type const alpha_tilde = alpha_ / (dt * dt);
-    scalar_type const delta_lagrange =
-            -(C + alpha_tilde * lagrange) / (weighted_sum_of_gradients + alpha_tilde);
+    scalar_type const beta_tilde  = beta_ * dt * dt;
+    scalar_type const gamma       = alpha_tilde * beta_tilde * dt;
+    scalar_type const delta_lagrange_0 =
+            (-C - alpha_tilde * lagrange - gamma * f1.dot(pdot1) * dt) / ((1 + gamma)*weighted_sum_of_gradients + alpha_tilde);
+    scalar_type const delta_lagrange_1 =
+            (-C - alpha_tilde * lagrange - gamma * f1.dot(pdot2) * dt) / ((1 + gamma)*weighted_sum_of_gradients + alpha_tilde);
+    scalar_type const delta_lagrange_2 =
+            (-C - alpha_tilde * lagrange - gamma * f1.dot(pdot3) * dt) / ((1 + gamma)*weighted_sum_of_gradients + alpha_tilde);
+    scalar_type const delta_lagrange_3 =
+            (-C - alpha_tilde * lagrange - gamma * f1.dot(pdot4) * dt) / ((1 + gamma)*weighted_sum_of_gradients + alpha_tilde);
 
-    lagrange += delta_lagrange;
+    lagrange += delta_lagrange_0;
+    lagrange += delta_lagrange_1;
+    lagrange += delta_lagrange_2;
+    lagrange += delta_lagrange_3;
+
     // because f = - grad(potential), then grad(potential) = -f and thus grad(C) = -f
-    p.row(v1) += w1 * -f1 * delta_lagrange;
-    p.row(v2) += w2 * -f2 * delta_lagrange;
-    p.row(v3) += w3 * -f3 * delta_lagrange;
-    p.row(v4) += w4 * -f4 * delta_lagrange;
+    p.row(v1) += w1 * -f1 * delta_lagrange_0;
+    p.row(v2) += w2 * -f2 * delta_lagrange_1;
+    p.row(v3) += w3 * -f3 * delta_lagrange_2;
+    p.row(v4) += w4 * -f4 * delta_lagrange_3;
 }
 
 cXPBDNeoHookeanConstraint::scalar_type

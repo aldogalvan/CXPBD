@@ -33,6 +33,7 @@ struct AABBNode {
     std::shared_ptr<AABBNode> right;
     BBox box;
     int childtri = -1;
+
 };
 
 class NodeComparator {
@@ -55,6 +56,7 @@ public:
 std::shared_ptr<AABBNode>
 buildAABB(vector<std::shared_ptr<AABBNode>>& nodes)
 {
+
     if (nodes.size() == 0)
         return NULL;
     else if (nodes.size() == 1)
@@ -133,21 +135,67 @@ std::shared_ptr<AABBNode> buildAABB(Eigen::Ref<const Eigen::MatrixXd> startPos,
     return buildAABB(leaves);
 }
 
+std::shared_ptr<BBox> buildAABB(Eigen::Ref<const Eigen::Vector3d> startPos,
+                                    Eigen::Ref<const Eigen::Vector3d> endPos,
+                                    double radius)
+{
+
+    auto box = make_shared<BBox>();
+
+    for (int k = 0; k < 3; k++)
+    {
+        box->mins[k] = numeric_limits<double>::infinity();
+        box->maxs[k] = -numeric_limits<double>::infinity();
+    }
+
+    for (int l = 0; l < 3; l++) {
+        box->mins[l] = min(box->mins[l], startPos(l));
+        box->maxs[l] = max(box->maxs[l], startPos(l));
+        box->mins[l] = min(box->mins[l], endPos(l)) - radius;
+        box->maxs[l] = max(box->maxs[l], endPos(l)) + radius;
+    }
+
+
+    return box;
+}
+
 void intersect(std::shared_ptr<AABBNode> left,
                std::shared_ptr<AABBNode> right,
                std::vector<Collision>& collisions)
 {
+
     if (!intersects(left->box, right->box))
         return;
-    if (left->childtri != -1) {
-        if (right->childtri != -1) {
+    if (left->childtri != -1)
+    {
+        if (right->childtri != -1)
+        {
             collisions.emplace_back(Collision{left->childtri, right->childtri});
         } else {
             intersect(left, right->left, collisions);
             intersect(left, right->right, collisions);
         }
-    } else {
+    } else
+    {
         intersect(left->left, right, collisions);
         intersect(left->right, right, collisions);
+    }
+}
+
+void intersect(std::shared_ptr<BBox> left,
+               std::shared_ptr<AABBNode> right,
+               std::vector<Collision>& collisions)
+{
+
+
+    if (!intersects(*left, right->box))
+        return;
+
+    if (right->childtri != -1)
+    {
+        collisions.emplace_back(Collision{NULL, right->childtri});
+    } else {
+        intersect(left, right->left, collisions);
+        intersect(left, right->right, collisions);
     }
 }

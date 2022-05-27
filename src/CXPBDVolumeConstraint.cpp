@@ -7,8 +7,9 @@
 cXPBDVolumeConstraint::cXPBDVolumeConstraint(
         std::initializer_list<index_type> indices,
         positions_type const& p,
-        scalar_type const alpha)
-        : base_type(indices, alpha), V0_{0.}
+        scalar_type const alpha,
+        scalar_type const beta)
+        : base_type(indices, alpha, beta), V0_{0.}
 {
     assert(indices.size() == 4u);
     V0_ = volume(p);
@@ -34,6 +35,8 @@ cXPBDVolumeConstraint::evaluate(positions_type const& p, masses_type const& m) c
 
 void cXPBDVolumeConstraint::project(
         positions_type& p,
+        positions_type& v,
+        positions_type& p0_,
         masses_type const& m,
         scalar_type& lagrange,
         scalar_type const dt) const
@@ -53,6 +56,11 @@ void cXPBDVolumeConstraint::project(
     Eigen::RowVector3d const p2 = p.row(v2);
     Eigen::RowVector3d const p3 = p.row(v3);
 
+    Eigen::Vector3d const pdot0 = v.row(v0);
+    Eigen::Vector3d const pdot1 = v.row(v1);
+    Eigen::Vector3d const pdot2 = v.row(v2);
+    Eigen::Vector3d const pdot3 = v.row(v3);
+
     auto const C = evaluate(p, m);
 
     Eigen::RowVector3d const grad0 = (1. / 6.) * (p1 - p2).cross(p3 - p2);
@@ -67,14 +75,27 @@ void cXPBDVolumeConstraint::project(
         return;
 
     scalar_type const alpha_tilde = alpha_ / (dt * dt);
-    scalar_type const delta_lagrange =
-            -(C + alpha_tilde * lagrange) / (weighted_sum_of_gradients + alpha_tilde);
+    scalar_type const beta_tilde = beta_ * dt * dt;
+    scalar_type const gamma = (alpha_ * beta_ ) / dt;
+    scalar_type const delta_lagrange_0 =
+            (-C - alpha_tilde * lagrange - gamma * grad0.dot(pdot0) * dt) / ((1 + gamma)*weighted_sum_of_gradients + alpha_tilde);
+    scalar_type const delta_lagrange_1 =
+            (-C - alpha_tilde * lagrange - gamma * grad1.dot(pdot1) * dt) / ((1 + gamma)*weighted_sum_of_gradients + alpha_tilde);
+    scalar_type const delta_lagrange_2 =
+            (-C - alpha_tilde * lagrange - gamma * grad2.dot(pdot2) * dt) / ((1 + gamma)*weighted_sum_of_gradients + alpha_tilde);
+    scalar_type const delta_lagrange_3 =
+            (-C - alpha_tilde * lagrange - gamma * grad3.dot(pdot3) * dt) / ((1 + gamma)*weighted_sum_of_gradients + alpha_tilde);
 
-    lagrange += delta_lagrange;
 
-    p.row(v0) += w0 * grad0 * delta_lagrange;
-    p.row(v1) += w1 * grad1 * delta_lagrange;
-    p.row(v2) += w2 * grad2 * delta_lagrange;
-    p.row(v3) += w3 * grad3 * delta_lagrange;
+
+    lagrange += delta_lagrange_0;
+    lagrange += delta_lagrange_1;
+    lagrange += delta_lagrange_2;
+    lagrange += delta_lagrange_3;
+
+    p.row(v0) += w0 * grad0 * delta_lagrange_0;
+    p.row(v1) += w1 * grad1 * delta_lagrange_1;
+    p.row(v2) += w2 * grad2 * delta_lagrange_2;
+    p.row(v3) += w3 * grad3 * delta_lagrange_3;
 
 }

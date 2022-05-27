@@ -31,6 +31,13 @@ file (GLOB_RECURSE CXPBD_SOURCES src/*.cpp src/*.h)
 # static library
 add_library (CXPBD STATIC ${CXPBD_SOURCES})
 
+# use cuda
+if (CXPBD_USE_CUDA)
+    find_package(CUDA REQUIRED)
+    set(CMAKE_CUDA_ARCH 5 6)
+    set(CMAKE_CONFIGURATION_TYPES "Release")
+endif()
+
 #include LibIGL
 target_include_directories(CXPBD PUBLIC ${PROJECT_SOURCE_DIR}/external/libigl-main )
 

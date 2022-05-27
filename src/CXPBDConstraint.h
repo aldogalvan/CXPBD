@@ -20,9 +20,9 @@ public:
     using scalar_type    = double;
 
 public:
-    cXPBDConstraint(std::initializer_list<index_type> indices) : indices_(indices), alpha_(0.0) {}
-    cXPBDConstraint(std::initializer_list<index_type> indices, scalar_type const alpha)
-            : indices_(indices), alpha_(alpha)
+    cXPBDConstraint(std::initializer_list<index_type> indices) : indices_(indices), alpha_(0.0), beta_(0.0) {}
+    cXPBDConstraint(std::initializer_list<index_type> indices, scalar_type const alpha, scalar_type const beta)
+            : indices_(indices), alpha_(alpha), beta_(beta)
     {
     }
 
@@ -32,12 +32,14 @@ public:
     }
 
     virtual void
-    project(positions_type& V, masses_type const& M, scalar_type& lagrange, scalar_type const dt)
+    project(positions_type& V, positions_type& Vdot, positions_type& V0, masses_type const& M,
+            scalar_type& lagrange, scalar_type const dt)
     const = 0;
     std::vector<index_type> const& indices() const { return indices_; }
 
 protected:
     scalar_type alpha_;
+    scalar_type beta_;
 
 private:
     std::vector<index_type> indices_;

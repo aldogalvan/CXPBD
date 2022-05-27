@@ -24,11 +24,11 @@ void cXPBDDeformableMesh::connectToChai3d(void)
     }
 }
 
-void cXPBDDeformableMesh::updateChai3d(void)
+void cXPBDDeformableMesh::updateChai3d(Eigen::MatrixXd& a_pos)
 {
     for (int i = 0; i < num_vertices; i++)
     {
-        Eigen::Vector3d vert = p_.row(i);
+        Eigen::Vector3d vert = a_pos.row(i);
         m_vertices->setLocalPos(i,vert.x(),vert.y(),vert.z());
     }
 }

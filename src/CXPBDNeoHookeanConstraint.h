@@ -24,10 +24,11 @@ public:
             positions_type const &p,
             scalar_type young_modulus,
             scalar_type poisson_ratio,
-            scalar_type const alpha = 0.0);
+            scalar_type const alpha = 0.0,
+            scalar_type const beta = 0.0);
 
     virtual void
-    project(positions_type &p, masses_type const &m, scalar_type &lagrange, scalar_type const dt)
+    project(positions_type &p, positions_type &v, positions_type& p0, masses_type const &m, scalar_type &lagrange, scalar_type const dt)
     const override;
 
 protected:

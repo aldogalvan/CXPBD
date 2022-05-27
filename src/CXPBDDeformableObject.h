@@ -20,7 +20,7 @@ public:
     using positions_type   = Eigen::MatrixXd;
     using index_type       = int;
     using masses_type      = Eigen::VectorXd;
-    using velocities_type  = Eigen::MatrixX3d;
+    using velocities_type  = Eigen::MatrixXd;
     using faces_type       = Eigen::MatrixXi;
     using elements_type    = Eigen::MatrixXi;
     using constraints_type = std::vector<std::unique_ptr<cXPBDConstraint>>;
@@ -61,10 +61,13 @@ public:
     void connectToChai3d(void);
 
     // This method updates the chai3d mesh
-    void updateChai3d(void);
+    void updateChai3d(Eigen::MatrixXd& a_pos);
 
-    // This method computes the collision
-    void computeCollision(void);
+    // Set frozen vertices
+    void isFixed(vector<bool> a_fixed)
+    {
+        fixed_ = a_fixed;
+    }
 
     // This method sets the ounding box
     void buildAABBBoundaryBox(positions_type pdes_)
@@ -208,6 +211,7 @@ private:
     index_type in_size;            ///< Size of inside set
     set<index_type> outside;       ///< Set of outside vertice
     index_type out_size;           ///< Size of outside set
+
 
 };
 

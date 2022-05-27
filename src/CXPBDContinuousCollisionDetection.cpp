@@ -109,6 +109,7 @@ void CTCD::findIntervals(double *op, int n, vector<TimeInterval> & intervals, bo
     }
 
     double time[6];
+
     // We don't care one bit about these imaginary roots
     double zeroi[6];
 
@@ -258,64 +259,61 @@ void CTCD::distancePoly3D(const Eigen::Vector3d &x10,
     findIntervals(op, 6, result, false);
 }
 
-ColInfo findCollisions(Eigen::MatrixXd& p_, Eigen::MatrixXd& plast_, cXPBDDeformableMesh* model,
-                       cXPBDToolMesh* tool, double& t , bool& collision)
+ColInfo findCollisions(Eigen::MatrixXd& pgoal_, Eigen::Vector3d& p_, Eigen::Vector3d& plast_, cXPBDDeformableMesh& model, double &t_)
 {
-    t = 100;
-
     ColInfo ret;
-    auto& vertCollisions = ret.vertCollisions;
+
     auto& faceCollisions = ret.faceCollisions;
 
-    vertCollisions.resize(tool->numVerts());
-    faceCollisions.resize(tool->numFaces());
+    // ONLY HAVE ONE PONT REPRESENTING THE DEVICE
+    // vertCollisions.resize(1);
+    // faceCollisions.resize(model.numFaces());
+    double radius = 0.01;
 
+    model.buildAABBBoundaryBox(pgoal_);
+    auto toolBB_ = buildAABB(plast_,p_,radius);
 
-    model->buildAABBBoundaryBox(p_);
-    tool->buildAABBBoundaryBox();
-    //tool->buildAnticipationBoundaryBox();
-
-    const auto& F_ = model->faces();
-    const auto& F_tool = tool->faces();
-    const auto& V_tool = tool->positions();
-    const auto& V_tool_last = tool->positions_last();
+    const auto& f_ = model.faces();
+    const auto& v_ = model.positions();
+    const auto& vlast_ = model.positions();
 
     std::vector<Collision> potentialCollisions;
-
-    intersect(tool->bb(), model->bb(), potentialCollisions);
+    intersect(toolBB_, model.bb(), potentialCollisions);
+    int it_count = 0;
 
     for (const auto& it : potentialCollisions) {
 
-        Eigen::Vector3i face = F_.row(it.collidingTriangle2);
+        Eigen::Vector3i face = f_.row(it.collidingTriangle2);
+        Eigen::Vector3d alast_ = vlast_.row(face(0));
+        Eigen::Vector3d blast_ = vlast_.row(face(1));
+        Eigen::Vector3d clast_  = vlast_.row(face(2));
+        Eigen::Vector3d a_ = v_.row(face(0));
+        Eigen::Vector3d b_ = v_.row(face(1));
+        Eigen::Vector3d c_ = v_.row(face(2));
+        Eigen::Vector3d vlastnormal_ = (blast_ - alast_).cross(clast_-alast_).normalized();
+        Eigen::Vector3d vnormal_ = (b_ - a_).cross(c_ - a_).normalized();
 
-        for (int vert = 0; vert < 3; vert++) {
-            int vidx = F_tool(it.collidingTriangle1, vert);
 
-            double t_;
+        if (CTCD::vertexFaceCTCD(
+                (plast_ ), // - vlastnormal_*radius
+                alast_.transpose(),
+                blast_.transpose(),
+                clast_.transpose(),
+                (p_ ), //- vnormal_*radius
+                a_.transpose(),
+                b_.transpose(),
+                c_.transpose(),
+                1e-6,
+                t_))
+        {
 
-            if (CTCD::vertexFaceCTCD(
-                    V_tool_last.row(vidx).transpose(),
-                    plast_.row(face(0)).transpose(),
-                    plast_.row(face(1)).transpose(),
-                    plast_.row(face(2)).transpose(),
-                    V_tool.row(vidx).transpose(),
-                    p_.row(face(0)).transpose(),
-                    p_.row(face(1)).transpose(),
-                    p_.row(face(2)).transpose(),
-                    1e-6,
-                    t_))
-            {
-
-                collision = true;
-
-                if (t_ < t)
-                {
-                    t = t_;
-                }
-
-                vertCollisions[vidx].emplace(it.collidingTriangle2);
-            }
+            ret.collision = true;
+            faceCollisions.insert(it.collidingTriangle2);
+            //ret.col.insert(std::make_tuple(it.collidingTriangle2,vlastnormal_,vnormal_));
+            it_count++;
+            return ret;
         }
+
     }
 
     /*
@@ -342,6 +340,7 @@ ColInfo findCollisions(Eigen::MatrixXd& p_, Eigen::MatrixXd& plast_, cXPBDDeform
         }
     }
      */
+
     return ret;
 
 }

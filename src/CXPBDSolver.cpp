@@ -5,7 +5,7 @@
 
 #include "CXPBDSolver.h"
 
-
+/*
 void applyVertexVsBodyConstraints(const ColInfo& col_info, Eigen::MatrixXd& p,
                                   cXPBDDeformableMesh* model,
                                   cXPBDToolMesh* tool)
@@ -88,7 +88,7 @@ void applyFaceVsVertexConstraints(const ColInfo& col_info, Eigen::MatrixXd& p,
     }
 }
 
-
+*/
 
 void solve(
         cXPBDDeformableMesh* model,
@@ -134,11 +134,13 @@ void solve(
         // generate collision constraints here ...
         double t;
         bool collision = false;
-        const auto& collisions = findCollisions(p,x, model, tool, t , collision);
+        Eigen::Vector3d pos;
+        double t_;
+        const auto& collisions = findCollisions(p,pos,pos,*model,t_);
 
         if (collision == true)
         {
-            applyVertexVsBodyConstraints(collisions, p, model, tool);
+            //applyVertexVsBodyConstraints(collisions, p, model, tool);
             tool->projectPos(t);
         }
 
@@ -151,6 +153,7 @@ void solve(
         }
 
         // applyFaceVsVertexConstraints(collisions,p, model,tool);
+        // applyVertexVsFaceConstraints(collisions,p, model,tool);
 
         // sequential gauss seidel type solve
         std::fill(lagrange_multipliers.begin(), lagrange_multipliers.end(), 0.0);
@@ -179,7 +182,7 @@ void solve(
             x.row(i) = p.row(i);
         }
 
-        model->updateChai3d();
+        model->updateChai3d(p);
         tool->updateChai3d();
     }
 }
