@@ -1,0 +1,9 @@
+C:/Users/aldof/CLionProjects/CXPBD/out/build/x64-Debug/CMakeFiles/CXPBD.dir
+C:/Users/aldof/CLionProjects/CXPBD/out/build/x64-Debug/CMakeFiles/edit_cache.dir
+C:/Users/aldof/CLionProjects/CXPBD/out/build/x64-Debug/CMakeFiles/rebuild_cache.dir
+C:/Users/aldof/CLionProjects/CXPBD/out/build/x64-Debug/extras/GLFW/CMakeFiles/glfw.dir
+C:/Users/aldof/CLionProjects/CXPBD/out/build/x64-Debug/extras/GLFW/CMakeFiles/edit_cache.dir
+C:/Users/aldof/CLionProjects/CXPBD/out/build/x64-Debug/extras/GLFW/CMakeFiles/rebuild_cache.dir
+C:/Users/aldof/CLionProjects/CXPBD/out/build/x64-Debug/examples/CMakeFiles/example-01.dir
+C:/Users/aldof/CLionProjects/CXPBD/out/build/x64-Debug/examples/CMakeFiles/edit_cache.dir
+C:/Users/aldof/CLionProjects/CXPBD/out/build/x64-Debug/examples/CMakeFiles/rebuild_cache.dir
