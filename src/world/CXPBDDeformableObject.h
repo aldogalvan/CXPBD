@@ -3,8 +3,8 @@
 //
 
 #include "chai3d.h"
-#include "CXPBDConstraint.h"
-#include "CXPBDAABB.h"
+#include "../constraints/CXPBDConstraint.h"
+#include "../collision/CXPBDAABB.h"
 #include <set>
 
 #ifndef CXPBD_CXPBDDEFORMABLEOBJECT_H
@@ -43,14 +43,16 @@ public:
     //--------------------------------------------------------------------------
 
     positions_type& positions() { return p_; }
-    positions_type& positions_last() {return plast_;};
+    positions_type& positions_last() {return plast_;}
+    positions_type* positions_desired() {return pdes_;}
     index_type& numVerts(){return num_vertices;}
     faces_type& faces() { return F_; }
     index_type& numFaces(){return num_faces;}
     elements_type& edges() { return E_; }
     index_type& numEdges(){return num_edges;}
     elements_type& tetrahedra() { return T_; }
-    index_type& numTetrahedra(){return num_tetrahedra;}
+    index_type& numTetrahedra() {return num_tetrahedra;}
+    positions_type& normals() {return N_;}
     constraints_type& constraints() { return constraints_; }
     velocities_type& velocity() { return v_; }
     masses_type& mass() { return m_; }
@@ -148,13 +150,13 @@ public:
     void projectToSurface(void);
 
     // This method constrains the edge lengths
-    void constrain_edge_lengths(scalar_type const compliance = 0.0);
+    void constrain_edge_lengths(scalar_type const compliance = 0.0 , scalar_type const damping = 0.0);
 
     // This method constraints the volume
-    void constrain_tetrahedron_volumes(scalar_type const compliance = 0.0);
+    void constrain_tetrahedron_volumes(scalar_type const compliance = 0.0 , scalar_type const damping = 0.0);
 
     // This method constrains the hinges
-    void constrain_hinge_bending(scalar_type const compliance = 0.0);
+    void constrain_hinge_bending(scalar_type const compliance = 0.0 , scalar_type const damping = 0.0);
 
     // This method constrains the elastic potential
     void constrain_green_strain_elastic_potential(
@@ -166,22 +168,17 @@ public:
     void constrain_neohookean_elasticity_potential(
             scalar_type young_modulus,
             scalar_type poisson_ratio,
-            scalar_type const compliance = 0.0);
+            scalar_type const compliance = 0.0,
+            scalar_type const damping = 0.0);
 
 
-    std::tuple<Eigen::MatrixX3d, // old position
-            Eigen::MatrixX3d> // new position
-    getPBDInfo()
+    //  This method computes the normals of the mesh;
+    void computeNormals(void);
+
+    // This method sets the desired positons of the mest
+    void setPDes(positions_type* a_pos)
     {
-        int nverts = num_vertices;
-
-        Eigen::MatrixXd oldPos(nverts, 3);
-        Eigen::MatrixXd newPos(nverts, 3);
-
-        oldPos = positions();
-        newPos = positions();
-
-        return std::make_tuple(oldPos, newPos);
+        pdes_ = a_pos;
     }
 
 protected:
@@ -193,6 +190,7 @@ private:
     positions_type p0_;            ///< Rest positions
     positions_type plast_;         ///< Last set of positions
     positions_type p_;             ///< Positions
+    positions_type* pdes_;         ///< Desired positions
     index_type num_vertices;       ///< Number of vertices
     faces_type F_;                 ///< Faces
     index_type num_faces;          ///< Number of faces
@@ -211,7 +209,7 @@ private:
     index_type in_size;            ///< Size of inside set
     set<index_type> outside;       ///< Set of outside vertice
     index_type out_size;           ///< Size of outside set
-
+    positions_type N_;             ///< Array of normals
 
 };
 

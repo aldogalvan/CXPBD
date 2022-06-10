@@ -5,6 +5,25 @@
 #ifndef CXPBD_CXPBD_H
 #define CXPBD_CXPBD_H
 
-#include "CXPBDDeformableObject.h"
+// WORLD
+#include "world/CXPBDDeformableObject.h"
+#include "world/CXPBDSolver.h"
+#include "world/CXPBDTool.h"
+#include "world/CXPBDToolMesh.h"
+#include "world/CXPBDWorld.h"
+
+// CONSTRAINTS
+#include "constraints/CXPBDConstraint.h"
+#include "constraints/CXPBDBendingConstraint.h"
+#include "constraints/CXPBDEdgeLengthConstraint.h"
+#include "constraints/CXPBDGreenStrainConstraint.h"
+#include "constraints/CXPBDNeoHookeanConstraint.h"
+#include "constraints/CXPBDVolumeConstraint.h"
+
+// COLLISION
+#include "collision/CXPBDAABB.h"
+#include "collision/CXPBDCollisionConstraints.h"
+#include "collision/CXPBDContinuousCollisionDetection.h"
+#include "collision/CXPBDDiscreteCollisionDetection.h"
 
 #endif //CXPBD_CXPBD_H

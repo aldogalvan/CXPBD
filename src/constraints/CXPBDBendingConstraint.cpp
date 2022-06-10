@@ -7,9 +7,11 @@
 
 void cXPBDBendingConstraint::project(
         positions_type& p,
+        positions_type& p0_,
         masses_type const& M,
         scalar_type& lagrange,
-        scalar_type const dt) const
+        scalar_type const dt,
+        gradient_type& F) const
 {
     auto const& indices = this->indices();
     auto const v0       = indices.at(0);

@@ -4,7 +4,7 @@
 
 #include <memory>
 #include "CXPBDContinuousCollisionDetection.h"
-#include "../shared/rpoly.h"
+#include "../../shared/rpoly.h"
 #include "CXPBDAABB.h"
 
 using namespace std;
@@ -259,18 +259,19 @@ void CTCD::distancePoly3D(const Eigen::Vector3d &x10,
     findIntervals(op, 6, result, false);
 }
 
-ColInfo findCollisions(Eigen::MatrixXd& pgoal_, Eigen::Vector3d& p_, Eigen::Vector3d& plast_, cXPBDDeformableMesh& model, double &t_)
+ColInfo findCollisions(Eigen::Vector3d& p_, Eigen::Vector3d& plast_, cXPBDDeformableMesh& model, double &t_)
 {
     ColInfo ret;
 
     auto& faceCollisions = ret.faceCollisions;
+    auto pdes = model.positions_desired();
+    auto& N_ = model.normals();
 
-    // ONLY HAVE ONE PONT REPRESENTING THE DEVICE
-    // vertCollisions.resize(1);
-    // faceCollisions.resize(model.numFaces());
+
+
     double radius = 0.01;
 
-    model.buildAABBBoundaryBox(pgoal_);
+    model.buildAABBBoundaryBox(*pdes);
     auto toolBB_ = buildAABB(plast_,p_,radius);
 
     const auto& f_ = model.faces();
@@ -280,6 +281,7 @@ ColInfo findCollisions(Eigen::MatrixXd& pgoal_, Eigen::Vector3d& p_, Eigen::Vect
     std::vector<Collision> potentialCollisions;
     intersect(toolBB_, model.bb(), potentialCollisions);
     int it_count = 0;
+
 
     for (const auto& it : potentialCollisions) {
 
@@ -295,11 +297,11 @@ ColInfo findCollisions(Eigen::MatrixXd& pgoal_, Eigen::Vector3d& p_, Eigen::Vect
 
 
         if (CTCD::vertexFaceCTCD(
-                (plast_ ), // - vlastnormal_*radius
+                plast_ , // - vlastnormal_*radius
                 alast_.transpose(),
                 blast_.transpose(),
                 clast_.transpose(),
-                (p_ ), //- vnormal_*radius
+                p_ , //- vnormal_*radius
                 a_.transpose(),
                 b_.transpose(),
                 c_.transpose(),
@@ -311,11 +313,10 @@ ColInfo findCollisions(Eigen::MatrixXd& pgoal_, Eigen::Vector3d& p_, Eigen::Vect
             faceCollisions.insert(it.collidingTriangle2);
             //ret.col.insert(std::make_tuple(it.collidingTriangle2,vlastnormal_,vnormal_));
             it_count++;
-            return ret;
+            //return ret;
         }
 
     }
-
     /*
     for (const auto& it : potentialCollisions) {
         Eigen::Vector3i face = F_tool.row(it.collidingTriangle1);

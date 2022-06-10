@@ -7,7 +7,7 @@
 
 #include <Eigen/Dense>
 #include "CXPBDDeformableObject.h"
-#include "CXPBDContinuousCollisionDetection.h"
+#include "collision/CXPBDContinuousCollisionDetection.h"
 #include "CXPBDSolver.h"
 #include "CXPBDToolMesh.h"
 #include "CXPBDTool.h"

@@ -5,9 +5,9 @@
 #include <Eigen/Dense>
 #include <vector>
 #include <set>
-#include "CXPBDDeformableObject.h"
-#include "CXPBDTool.h"
-#include "CXPBDToolMesh.h"
+#include "../world/CXPBDDeformableObject.h"
+#include "../world/CXPBDTool.h"
+#include "../world/CXPBDToolMesh.h"
 
 #ifndef CXPBD_CXPBDCONTINUOUSCOLLISIONDETECTION_H
 #define CXPBD_CXPBDCONTINUOUSCOLLISIONDETECTION_H
@@ -45,7 +45,7 @@ struct TimeInterval
 };
 
 
-ColInfo findCollisions(Eigen::MatrixXd& pgoal_,Eigen::Vector3d& p_, Eigen::Vector3d& plast_, cXPBDDeformableMesh& model, double &t_);
+ColInfo findCollisions(Eigen::Vector3d& p_, Eigen::Vector3d& plast_, cXPBDDeformableMesh& model, double &t_);
 
 class CTCD {
 

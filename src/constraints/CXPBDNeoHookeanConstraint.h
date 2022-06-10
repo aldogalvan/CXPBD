@@ -28,7 +28,8 @@ public:
             scalar_type const beta = 0.0);
 
     virtual void
-    project(positions_type &p, positions_type &v, positions_type& p0, masses_type const &m, scalar_type &lagrange, scalar_type const dt)
+    project(positions_type &P, positions_type& P0, masses_type const &M,
+            scalar_type &lagrange, scalar_type const dt, gradient_type& F_)
     const override;
 
 protected:

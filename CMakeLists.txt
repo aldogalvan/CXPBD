@@ -1,12 +1,15 @@
 cmake_minimum_required(VERSION 3.21)
-project(CXPBD)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
+set(CMAKE_CUDA_STANDARD 14)
 
+project(CXPBD CXX CUDA)
 
 #CHAI-3D
 # include Chai3d
 # -- this is required by Chai3d to pick the correct path for OpenGL headers
+
 FIND_PACKAGE(CHAI3D REQUIRED)
 ADD_DEFINITIONS(${CHAI3D_DEFINITIONS})
 if (CMAKE_SYSTEM_NAME MATCHES Darwin)
@@ -21,8 +24,13 @@ INCLUDE_DIRECTORIES (
         ${CHAI3D_INCLUDE_DIRS}
 )
 
+#
+
 INCLUDE_DIRECTORIES (
         src
+        src/world
+        src/collision
+        src/constraints
 )
 
 # static library source files
@@ -38,8 +46,11 @@ if (CXPBD_USE_CUDA)
     set(CMAKE_CONFIGURATION_TYPES "Release")
 endif()
 
+
+
 #include LibIGL
-target_include_directories(CXPBD PUBLIC ${PROJECT_SOURCE_DIR}/external/libigl-main )
+add_subdirectory(${PROJECT_SOURCE_DIR}/external/IGL)
+include_directories(${PROJECT_SOURCE_DIR}/external/IGL)
 
 # GLFW
 if (EXISTS ${PROJECT_SOURCE_DIR}/extras/GLFW)

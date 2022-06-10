@@ -4,7 +4,7 @@
 
 #include "CXPBDNeoHookeanConstraint.h"
 #include <Eigen/Dense>
-#include <eigen/SVD>
+#include <Eigen/SVD>
 
 cXPBDNeoHookeanConstraint::cXPBDNeoHookeanConstraint(
         std::initializer_list<index_type> indices,
@@ -40,11 +40,11 @@ cXPBDNeoHookeanConstraint::cXPBDNeoHookeanConstraint(
 
 void cXPBDNeoHookeanConstraint::project(
         positions_type& p,
-        positions_type& v,
         positions_type& p0,
         masses_type const& m,
         scalar_type& lagrange,
-        scalar_type const dt) const
+        scalar_type const dt,
+        gradient_type& F_) const
 {
     auto const v1 = this->indices().at(0);
     auto const v2 = this->indices().at(1);
@@ -56,10 +56,10 @@ void cXPBDNeoHookeanConstraint::project(
     auto const p3 = p.row(v3);
     auto const p4 = p.row(v4);
 
-    auto const pdot1 = v.row(v1);
-    auto const pdot2 = v.row(v2);
-    auto const pdot3 = v.row(v3);
-    auto const pdot4 = v.row(v4);
+    auto const pdot1 = p0.row(v1) - p1;
+    auto const pdot2 = p0.row(v2) - p2;
+    auto const pdot3 = p0.row(v3) - p3;
+    auto const pdot4 = p0.row(v4) - p4;
 
     auto const w1 = 1. / m(v1);
     auto const w2 = 1. / m(v2);

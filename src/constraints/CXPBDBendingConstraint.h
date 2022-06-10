@@ -25,8 +25,9 @@ public:
     cXPBDBendingConstraint(
             std::initializer_list<index_type> indices,
             positions_type const& p,
-            scalar_type const alpha = 0.0)
-            : base_type(indices, alpha), c_(0.,0.,0.)
+            scalar_type const alpha = 0.0,
+            scalar_type const beta = 0.0)
+            : base_type(indices, alpha, beta), c_(0.,0.,0.)
     {
 
         assert(indices.size() == 4u);
@@ -47,7 +48,8 @@ public:
     }
 
     virtual void
-    project(positions_type& V, masses_type const& M, scalar_type& lagrange, scalar_type const dt)
+    project(positions_type& V, positions_type& V0, masses_type const& M,
+            scalar_type& lagrange, scalar_type const dt, gradient_type& F)
     const override;
 
 

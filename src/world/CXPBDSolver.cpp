@@ -152,9 +152,7 @@ void solve(
             }
         }
 
-        // applyFaceVsVertexConstraints(collisions,p, model,tool);
-        // applyVertexVsFaceConstraints(collisions,p, model,tool);
-
+        Eigen::Vector3d F(0,0,0);
         // sequential gauss seidel type solve
         std::fill(lagrange_multipliers.begin(), lagrange_multipliers.end(), 0.0);
         for (auto n = 0u; n < num_iterations; ++n)
@@ -162,7 +160,7 @@ void solve(
             for (auto j = 0u; j < J; ++j)
             {
                 auto const& constraint = constraints[j];
-                constraint->project(p, m, lagrange_multipliers[j], dt);
+                constraint->project(p, x, m, lagrange_multipliers[j], dt, F);
             }
         }
 
@@ -172,8 +170,6 @@ void solve(
         {
             lagrange_sum += *it;
         }
-
-        //std::cout << lagrange_sum << std::endl;
 
         // update solution
         for (auto i = 0u; i < x.rows(); ++i)

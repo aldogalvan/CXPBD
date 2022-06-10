@@ -3,7 +3,7 @@
 //
 
 #include "chai3d.h"
-#include "CXPBDAABB.h"
+#include "collision/CXPBDAABB.h"
 #include <Eigen/Core>
 
 using namespace chai3d;

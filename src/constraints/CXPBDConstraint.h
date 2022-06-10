@@ -32,8 +32,8 @@ public:
     }
 
     virtual void
-    project(positions_type& V, positions_type& Vdot, positions_type& V0, masses_type const& M,
-            scalar_type& lagrange, scalar_type const dt)
+    project(positions_type& V, positions_type& V0, masses_type const& M,
+            scalar_type& lagrange, scalar_type const dt , gradient_type& F)
     const = 0;
     std::vector<index_type> const& indices() const { return indices_; }
 

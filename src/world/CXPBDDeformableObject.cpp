@@ -3,10 +3,11 @@
 //
 
 #include "CXPBDDeformableObject.h"
-#include "CXPBDEdgeLengthConstraint.h"
-#include "CXPBDVolumeConstraint.h"
-#include "CXPBDNeoHookeanConstraint.h"
-#include "CXPBDBendingConstraint.h"
+#include "constraints/CXPBDEdgeLengthConstraint.h"
+#include "constraints/CXPBDVolumeConstraint.h"
+#include "constraints/CXPBDNeoHookeanConstraint.h"
+#include "constraints/CXPBDBendingConstraint.h"
+#include "include/igl/per_face_normals.h"
 
 void cXPBDDeformableMesh::connectToChai3d(void)
 {
@@ -68,7 +69,7 @@ void cXPBDDeformableMesh::scaleObject(double a_scale)
     p_ *= a_scale;
 }
 
-void cXPBDDeformableMesh::constrain_edge_lengths(scalar_type const compliance)
+void cXPBDDeformableMesh::constrain_edge_lengths(scalar_type const compliance , scalar_type const damping)
 {
     auto const& positions = this->p0();
     auto const& E  = this->edges();
@@ -85,13 +86,14 @@ void cXPBDDeformableMesh::constrain_edge_lengths(scalar_type const compliance)
                         static_cast<std::uint32_t>(e0),
                         static_cast<std::uint32_t>(e1)},
                 positions,
-                compliance);
+                compliance,
+                damping);
 
         this->constraints().push_back(std::move(constraint));
     }
 }
 
-void cXPBDDeformableMesh::constrain_tetrahedron_volumes(scalar_type const compliance)
+void cXPBDDeformableMesh::constrain_tetrahedron_volumes(scalar_type const compliance , scalar_type const damping)
 {
     auto const& positions = this->p0();
     auto const& elements  = this->tetrahedra();
@@ -106,13 +108,14 @@ void cXPBDDeformableMesh::constrain_tetrahedron_volumes(scalar_type const compli
                         static_cast<std::uint32_t>(element(2)),
                         static_cast<std::uint32_t>(element(3))},
                 positions,
-                compliance);
+                compliance,
+                damping);
 
         this->constraints().push_back(std::move(constraint));
     }
 }
 
-void cXPBDDeformableMesh::constrain_hinge_bending(const scalar_type compliance)
+void cXPBDDeformableMesh::constrain_hinge_bending(const scalar_type compliance , scalar_type const damping)
 {
     auto const& positions = this->p0();
     auto const& F = this->faces();
@@ -165,7 +168,8 @@ void cXPBDDeformableMesh::constrain_hinge_bending(const scalar_type compliance)
                         static_cast<std::uint32_t>(element(2)),
                         static_cast<std::uint32_t>(element(3))},
                 positions,
-                compliance);
+                compliance,
+                damping);
 
         this->constraints().push_back(std::move(constraint));
     }
@@ -174,7 +178,8 @@ void cXPBDDeformableMesh::constrain_hinge_bending(const scalar_type compliance)
 void cXPBDDeformableMesh::constrain_neohookean_elasticity_potential(
         scalar_type young_modulus,
         scalar_type poisson_ratio,
-        scalar_type const compliance)
+        scalar_type const compliance,
+        scalar_type const damping)
 {
     auto const& positions = this->p0();
     auto const& elements  = this->tetrahedra();
@@ -191,8 +196,15 @@ void cXPBDDeformableMesh::constrain_neohookean_elasticity_potential(
                 positions,
                 young_modulus,
                 poisson_ratio,
-                compliance);
+                compliance,
+                damping);
 
         this->constraints().push_back(std::move(constraint));
     }
+}
+
+void cXPBDDeformableMesh::computeNormals(void)
+{
+    N_.resize(num_faces,3);
+    igl::per_face_normals(*pdes_,F_,N_);
 }

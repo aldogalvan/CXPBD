@@ -9,5 +9,7 @@
     <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/imgui" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/libigl-imgui" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/tetgen" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/IGL" vcs="Git" />
   </component>
 </project>
