@@ -45,7 +45,7 @@ bool mirroredDisplay = false;
 //------------------------------------------------------------------------------
 
 // A deformable object using the XPBD library
-cXPBDDeformableMesh* xpbd_mesh;
+cXPBDDeformableMesh* box;
 
 // a virtual tool representing the haptic device in the scene
 cShapeSphere* tool;
@@ -340,8 +340,8 @@ int main(int argc, char* argv[])
     //--------------------------------------------------------------------------
 
     // creates the deformable objects
-    xpbd_mesh = new cXPBDDeformableMesh();
-    world->addChild(xpbd_mesh);
+    box = new cXPBDDeformableMesh();
+    world->addChild(box);
     createTetrahedralMesh(xpbd_mesh);
     xpbd_mesh->setLocalPos(Eigen::Vector3d(0,0,1));
     xpbd_mesh->scaleObject(0.2);
