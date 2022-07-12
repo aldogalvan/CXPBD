@@ -71,16 +71,16 @@ void cXPBDVolumeConstraint::project(
     auto const weighted_sum_of_gradients = w0 * grad0.squaredNorm() + w1 * grad1.squaredNorm() +
                                            w2 * grad2.squaredNorm() + w3 * grad3.squaredNorm();
 
-    if (weighted_sum_of_gradients < 1e-5)
-        return;
-
     scalar_type const alpha_tilde = alpha_ / (dt * dt);
     scalar_type const beta_tilde = beta_ * dt * dt;
     scalar_type const gamma = (alpha_tilde * beta_tilde ) / dt;
+
+    if (abs(alpha_tilde+weighted_sum_of_gradients) < 1e-6)
+        return;
+
     scalar_type const delta_lagrange =
             (-C - alpha_tilde * lagrange - gamma * (grad0.dot(pdot0) + grad1.dot(pdot1)
             + grad2.dot(pdot2) + grad3.dot(pdot3))) / ((1 + gamma)*weighted_sum_of_gradients + alpha_tilde);
-
 
     lagrange += delta_lagrange;
     F += delta_lagrange*(grad0 + grad1 + grad2 + grad3);

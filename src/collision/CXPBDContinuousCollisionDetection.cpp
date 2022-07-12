@@ -95,8 +95,6 @@ bool CTCD::couldHaveRoots(double *op, int degree, bool pos) {
     return !((pos && result < 0) || (!pos && result > 0));
 }
 
-
-
 void CTCD::findIntervals(double *op, int n, vector<TimeInterval> & intervals, bool pos)
 {
     int roots=0;
@@ -267,14 +265,13 @@ ColInfo findCollisions(Eigen::Vector3d& p_, Eigen::Vector3d& plast_, cXPBDDeform
     auto pdes = model.positions_desired();
     auto& N_ = model.normals();
 
-
-
     double radius = 0.01;
 
-    model.buildAABBBoundaryBox(*pdes);
+    model.buildAABBBoundaryBox();
     auto toolBB_ = buildAABB(plast_,p_,radius);
 
     const auto& f_ = model.faces();
+
     const auto& v_ = model.positions();
     const auto& vlast_ = model.positions();
 
@@ -282,6 +279,7 @@ ColInfo findCollisions(Eigen::Vector3d& p_, Eigen::Vector3d& plast_, cXPBDDeform
     intersect(toolBB_, model.bb(), potentialCollisions);
     int it_count = 0;
 
+    //std::cout << potentialCollisions.size() << std::endl;
 
     for (const auto& it : potentialCollisions) {
 
@@ -292,9 +290,8 @@ ColInfo findCollisions(Eigen::Vector3d& p_, Eigen::Vector3d& plast_, cXPBDDeform
         Eigen::Vector3d a_ = v_.row(face(0));
         Eigen::Vector3d b_ = v_.row(face(1));
         Eigen::Vector3d c_ = v_.row(face(2));
-        Eigen::Vector3d vlastnormal_ = (blast_ - alast_).cross(clast_-alast_).normalized();
-        Eigen::Vector3d vnormal_ = (b_ - a_).cross(c_ - a_).normalized();
-
+        Eigen::Vector3d normal = N_.row(it.collidingTriangle2);
+        a_ += normal*radius; b_ += normal*radius; c_ += normal*radius;
 
         if (CTCD::vertexFaceCTCD(
                 plast_ , // - vlastnormal_*radius
@@ -308,11 +305,10 @@ ColInfo findCollisions(Eigen::Vector3d& p_, Eigen::Vector3d& plast_, cXPBDDeform
                 1e-6,
                 t_))
         {
-
             ret.collision = true;
             faceCollisions.insert(it.collidingTriangle2);
-            //ret.col.insert(std::make_tuple(it.collidingTriangle2,vlastnormal_,vnormal_));
             it_count++;
+            //ret.col.insert(std::make_tuple(it.collidingTriangle2,vlastnormal_,vnormal_));
             //return ret;
         }
 
@@ -341,7 +337,7 @@ ColInfo findCollisions(Eigen::Vector3d& p_, Eigen::Vector3d& plast_, cXPBDDeform
         }
     }
      */
-
+    //std::cout << it_count << std::endl;
     return ret;
 
 }

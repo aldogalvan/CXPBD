@@ -1,6 +1,6 @@
 
-#include "CXPBDDeformableObject.h"
 #include <Eigen/Core>
+#include "CXPBDDeformableObject.h"
 
 #ifndef CXPBD_CXPBDCOLLISIONCONSTRAINTS_H
 #define CXPBD_CXPBDCOLLISIONCONSTRAINTS_H

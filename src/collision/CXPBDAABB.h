@@ -18,8 +18,13 @@ std::shared_ptr<AABBNode> buildAABB(Eigen::Ref<const Eigen::MatrixXd> startPos,
                                     Eigen::Ref<const Eigen::MatrixXd> endPos,
                                     Eigen::Ref<const Eigen::MatrixXi> F);
 
+std::shared_ptr<AABBNode> buildAABB(Eigen::Ref<const Eigen::MatrixXd> pos,
+                                Eigen::Ref<const Eigen::MatrixXi> F );
+
 std::shared_ptr<BBox> buildAABB(Eigen::Ref<const Eigen::Vector3d> startPos,
                         Eigen::Ref<const Eigen::Vector3d> endPos , double radius);
+
+std::shared_ptr<BBox> buildAABB(Eigen::Ref<const Eigen::Vector3d> startPos, double radius);
 
 struct Collision {
     int collidingTriangle1; // Triangle from the "left" AABBNode

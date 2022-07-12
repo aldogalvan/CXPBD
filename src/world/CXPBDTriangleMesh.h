@@ -1,19 +1,20 @@
 //
-// Created by aldof on 4/2/2022.
+// Created by aldo on 6/20/22.
 //
+
+#ifndef CXPBD_CXPBDTRIANGLEMESH_H
+#define CXPBD_CXPBDTRIANGLEMESH_H
 
 #include "chai3d.h"
 #include "../constraints/CXPBDConstraint.h"
 #include "../collision/CXPBDAABB.h"
 #include <set>
 
-#ifndef CXPBD_CXPBDDEFORMABLEOBJECT_H
-#define CXPBD_CXPBDDEFORMABLEOBJECT_H
 
 using namespace std;
 using namespace chai3d;
 
-class cXPBDDeformableMesh : public cMesh
+class cXPBDTriangleMesh : public cMesh
 {
 
 public:
@@ -33,10 +34,10 @@ public:
 public:
 
     //! Constructor of cMesh.
-    cXPBDDeformableMesh(){};
+    cXPBDTriangleMesh(){};
 
     //! Destructor of cMesh.
-    ~cXPBDDeformableMesh(){};
+    ~cXPBDTriangleMesh(){};
 
     //--------------------------------------------------------------------------
     // PUBLIC METHODS - GENERAL
@@ -50,8 +51,6 @@ public:
     index_type& numFaces(){return num_faces;}
     elements_type& edges() { return E_; }
     index_type& numEdges(){return num_edges;}
-    elements_type& tetrahedra() { return T_; }
-    index_type& numTetrahedra() {return num_tetrahedra;}
     positions_type& normals() {return N_;}
     constraints_type& constraints() { return constraints_; }
     velocities_type& velocity() { return v_; }
@@ -75,7 +74,7 @@ public:
     // This method sets the ounding box
     void buildAABBBoundaryBox()
     {
-        bb_ = buildAABB(p_,F_);
+        bb_ = buildAABB(p_,pdes_,F_);
     }
 
     // This method computes the centroid
@@ -153,25 +152,11 @@ public:
     // This method constrains the edge lengths
     void constrain_edge_lengths(scalar_type const compliance = 0.0 , scalar_type const damping = 0.0);
 
-    // This method constraints the volume
-    void constrain_tetrahedron_volumes(scalar_type const compliance = 0.0 , scalar_type const damping = 0.0);
-
     // This method constrains the hinges
     void constrain_hinge_bending(scalar_type const compliance = 0.0 , scalar_type const damping = 0.0);
 
-    // This method constrains the elastic potential
-    void constrain_green_strain_elastic_potential(
-            scalar_type young_modulus,
-            scalar_type poisson_ratio,
-            scalar_type const compliance = 0.0);
-
-    // This method constrains the elasticity potential
-    void constrain_neohookean_elasticity_potential(
-            scalar_type young_modulus,
-            scalar_type poisson_ratio,
-            scalar_type const compliance = 0.0,
-            scalar_type const damping = 0.0);
-
+    // This method constrains isometric bending
+    void constrain_isometric_bending(scalar_type const compliance = 0.0, scalar_type const damping = 0.0);
 
     //  This method computes the normals of the mesh;
     void computeNormals(void);
@@ -227,4 +212,4 @@ private:
 
 };
 
-#endif //CXPBD_CXPBDDEFORMABLEOBJECT_H
+#endif //CXPBD_CXPBDTRIANGLEMESH_H

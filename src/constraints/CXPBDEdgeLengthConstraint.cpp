@@ -32,7 +32,13 @@ void cXPBDEdgeConstraint::project(
     auto const pdot1     = p1 - p0_.row(v1);
     auto const w0          = 1. / M(v0);
     auto const w1          = 1. / M(v1);
-    auto const n        = (p0 - p1).normalized();
+    Eigen::Vector3d n = (p0 - p1);
+    double d = n.norm();
+    if (d > 1e-6)
+        n = n / d;
+    else
+        return;
+
     auto const C        = evaluate(p, M);
 
 
@@ -43,6 +49,12 @@ void cXPBDEdgeConstraint::project(
     scalar_type const alpha_tilde               = alpha_ / (dt * dt);
     scalar_type const beta_tilde                = beta_ * dt * dt;
     scalar_type const gamma                     = alpha_tilde * beta_tilde / dt;
+
+
+    if (alpha_tilde + weighted_sum_of_gradients < 1e-6)
+        return;
+
+
     scalar_type const delta_lagrange =
             (-C - alpha_tilde * lagrange - gamma * (grad0.dot(pdot0) + grad1.dot(pdot1))) /
             ((1 + gamma)*weighted_sum_of_gradients + alpha_tilde);

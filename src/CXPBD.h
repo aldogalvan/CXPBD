@@ -22,7 +22,6 @@
 
 // COLLISION
 #include "collision/CXPBDAABB.h"
-#include "collision/CXPBDCollisionConstraints.h"
 #include "collision/CXPBDContinuousCollisionDetection.h"
 #include "collision/CXPBDDiscreteCollisionDetection.h"
 

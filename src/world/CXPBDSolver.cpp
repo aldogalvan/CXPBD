@@ -136,7 +136,7 @@ void solve(
         bool collision = false;
         Eigen::Vector3d pos;
         double t_;
-        const auto& collisions = findCollisions(p,pos,pos,*model,t_);
+        const auto& collisions = findCollisions(pos,pos,*model,t_);
 
         if (collision == true)
         {

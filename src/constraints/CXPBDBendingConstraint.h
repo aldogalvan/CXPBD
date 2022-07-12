@@ -25,11 +25,12 @@ public:
     cXPBDBendingConstraint(
             std::initializer_list<index_type> indices,
             positions_type const& p,
+            scalar_type const di_ang = 0.0,
             scalar_type const alpha = 0.0,
             scalar_type const beta = 0.0)
-            : base_type(indices, alpha, beta), c_(0.,0.,0.)
+            : base_type(indices, alpha, beta), m_di_ang(di_ang) , c_(0.,0.,0.)
     {
-
+        
         assert(indices.size() == 4u);
         auto const h0 = this->indices()[0];
         auto const h1 = this->indices()[1];
@@ -47,6 +48,8 @@ public:
 
     }
 
+    virtual scalar_type evaluate(positions_type const& V, masses_type const& M) const;
+
     virtual void
     project(positions_type& V, positions_type& V0, masses_type const& M,
             scalar_type& lagrange, scalar_type const dt, gradient_type& F)
@@ -56,6 +59,7 @@ public:
 private:
     gradient_type c_;
     shape_type A;
+    scalar_type m_di_ang;
 };
 
 

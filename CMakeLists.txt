@@ -65,6 +65,7 @@ target_link_libraries(CXPBD
         ${CHAI3D_LIBRARIES}
         ${GLFW_LIBRARIES}
         Eigen3::Eigen
+        igl::core
         )
 
 add_subdirectory(examples)

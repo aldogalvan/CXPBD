@@ -43,5 +43,7 @@ protected:
 
 private:
     std::vector<index_type> indices_;
+    std::vector<scalar_type> m_weights;
+    bool marked_for_deletion = 0;
 };
 #endif //CXPBD_CXPBDCONSTRAINT_H
