@@ -1,8 +1,0 @@
-//
-// Created by aldo on 6/18/22.
-//
-
-#ifndef CXPBD_CXPBDBROADPHASE_H
-#define CXPBD_CXPBDBROADPHASE_H
-
-#endif //CXPBD_CXPBDBROADPHASE_H

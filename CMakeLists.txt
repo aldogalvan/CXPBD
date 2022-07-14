@@ -37,7 +37,7 @@ INCLUDE_DIRECTORIES (
 file (GLOB_RECURSE CXPBD_SOURCES src/*.cpp src/*.h)
 
 # static library
-add_library (CXPBD STATIC ${CXPBD_SOURCES})
+add_library (CXPBD STATIC ${CXPBD_SOURCES} src/collision/CXPBDContactConstraint.cpp src/collision/CXPBDContactConstraint.h src/collision/CXPBDContactProjection.cpp src/collision/CXPBDContactProjection.h src/collision/CXPBDProxyAlgorithm.cpp src/collision/CXPBDProxyAlgorithm.h)
 
 # use cuda
 if (CXPBD_USE_CUDA)
@@ -49,13 +49,15 @@ endif()
 
 
 #include LibIGL
-add_subdirectory(${PROJECT_SOURCE_DIR}/external/IGL)
-include_directories(${PROJECT_SOURCE_DIR}/external/IGL)
+add_subdirectory(${PROJECT_SOURCE_DIR}/external/libigl-main)
+include_directories(${PROJECT_SOURCE_DIR}/external/libigl-main)
 
 # GLFW
 if (EXISTS ${PROJECT_SOURCE_DIR}/extras/GLFW)
     add_subdirectory (${PROJECT_SOURCE_DIR}/extras/GLFW)
 endif ()
+
+include_directories(extras/GLFW/include)
 
 #EIGEN3
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)

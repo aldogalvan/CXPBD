@@ -5,90 +5,6 @@
 
 #include "CXPBDSolver.h"
 
-/*
-void applyVertexVsBodyConstraints(const ColInfo& col_info, Eigen::MatrixXd& p,
-                                  cXPBDDeformableMesh* model,
-                                  cXPBDToolMesh* tool)
-{
-    const auto& vertCollisions = col_info.vertCollisions;
-    const auto& p_tool = tool->positions();
-    const auto& p_tool_last = tool->positions_last();
-    // const auto& p_tool = tool->positions_next();
-    const auto& f_def = model->faces();
-    // const auto& f_tool = tool->faces();
-
-    for (int i = 0; i < tool->numVerts(); i++){
-        if (!vertCollisions[i].empty()){
-            for (auto &col : vertCollisions[i]){
-                Eigen::Vector3d pos = p_tool.row(i) ;
-                Eigen::Vector3i face = f_def.row(col);
-                Eigen::Vector3d p1 = p.row(face(0));
-                Eigen::Vector3d p2 = p.row(face(1));
-                Eigen::Vector3d p3 = p.row(face(2));
-                auto p0 = (p1 + p2 + p3) / 3;
-                Eigen::Vector3d norm = (p2 - p1).cross(p3 - p1).normalized();
-                double j = (pos - p0).dot(norm);
-
-                // std::cout << j << "," << norm.transpose() << std::endl;
-
-                if ( j < 0 )
-                {
-                    p.row(face(0)) -=  2 * j * norm.transpose();
-                    p.row(face(1)) -=  2 * j * norm.transpose();
-                    p.row(face(2)) -=  2 * j * norm.transpose();
-                }
-                else
-                {
-                    p.row(face(0)) +=  2 * j * norm.transpose();
-                    p.row(face(1)) +=  2 * j * norm.transpose();
-                    p.row(face(2)) +=  2 * j * norm.transpose();
-                }
-
-                // std::cout << j << std::endl;
-                //p.row(face(0)) +=  2 * j * norm.transpose();
-                //p.row(face(1)) +=  2 * j * norm.transpose();
-                //p.row(face(2)) +=  2 * j * norm.transpose();
-
-
-            }
-        }
-    }
-}
-
-void applyFaceVsVertexConstraints(const ColInfo& col_info, Eigen::MatrixXd& p,
-                                  cXPBDDeformableMesh* model,
-                                  cXPBDToolMesh* tool)
-{
-
-    const auto& faceCollisions = col_info.faceCollisions;
-    auto& p_tool = tool->positions();
-    // const auto& p_tool = tool->positions_next();
-    auto& f_def = model->faces();
-    auto& f_tool = tool->faces();
-    for (int i = 0; i < tool->numFaces(); i++){
-        if (!faceCollisions[i].empty()){
-            for (auto &col : faceCollisions[i]){
-                Eigen::Vector3i face = f_tool.row(i);
-                Eigen::Vector3d p1 = p_tool.row(face(0));
-                Eigen::Vector3d p2 = p_tool.row(face(1));
-                Eigen::Vector3d p3 = p_tool.row(face(2));
-                auto p0 = (p1+p2+p3)/3;
-                Eigen::Vector3d pos = p.row(col);
-                Eigen::Vector3d norm = (p2 - p1).cross(p3 - p1).normalized();
-                double j = (pos - p0).dot(norm);
-                if (j < 0) {
-                    p.row(i) -=  j * norm.transpose();
-                }
-                else{
-                    //p.row(i) -=  j * norm.transpose();
-                }
-
-            }
-        }
-    }
-}
-
-*/
 
 void solve(
         cXPBDDeformableMesh* model,
@@ -136,7 +52,8 @@ void solve(
         bool collision = false;
         Eigen::Vector3d pos;
         double t_;
-        const auto& collisions = findCollisions(pos,pos,*model,t_);
+        std::vector<ColInfo*> collisions;
+        collision = findCollisions(pos,pos,0.1,model,collisions);
 
         if (collision == true)
         {
@@ -178,7 +95,7 @@ void solve(
             x.row(i) = p.row(i);
         }
 
-        model->updateChai3d(p);
+        model->updateChai3d();
         tool->updateChai3d();
     }
 }

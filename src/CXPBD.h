@@ -7,7 +7,6 @@
 
 // WORLD
 #include "world/CXPBDDeformableObject.h"
-#include "world/CXPBDSolver.h"
 #include "world/CXPBDTool.h"
 #include "world/CXPBDToolMesh.h"
 #include "world/CXPBDWorld.h"

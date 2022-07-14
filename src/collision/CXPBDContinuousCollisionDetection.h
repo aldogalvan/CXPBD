@@ -12,14 +12,53 @@
 #ifndef CXPBD_CXPBDCONTINUOUSCOLLISIONDETECTION_H
 #define CXPBD_CXPBDCONTINUOUSCOLLISIONDETECTION_H
 
+enum ColType
+{
+    VERTEXCOLLISION,
+    EDGECOLLISION,
+    FACECOLLISION
+};
+
 struct ColInfo {
 
-    bool collision = false;
+    // Type of collision
+    ColType type;
 
-    std::set<std::tuple<int,Eigen::Vector3d,Eigen::Vector3d>> col;
-    set<int> faceCollisions;
-    std::vector<Eigen::Vector3d> normallast;
-    std::vector<Eigen::Vector3d> normal;
+    // time of collision
+    double t;
+
+    // Index of collided triangle
+    int triangleIndex;
+
+    // Indices making up edge
+    pair<int,int> edge;
+
+    // Index of vertex
+    int vertex;
+
+    // Position of triangle at t1
+    Eigen::Matrix3d triangle1;
+
+    // Position of triangle at t0
+    Eigen::Matrix3d triangle0;
+
+    // Position of triangle at tc
+    Eigen::Matrix3d trianglec;
+
+    // Normal of triangle at t1
+    Eigen::Vector3d normal1;
+
+    // Normal of triangle at t0
+    Eigen::Vector3d normal0;
+
+    // Normal of triangle at tc
+    Eigen::Vector3d normalc;
+
+    // Barycentric coordinates at collision
+    double alpha , beta , gamma;
+
+    // Normal vector
+    Eigen::Vector3d normal;
 
 };
 
@@ -29,7 +68,7 @@ struct TimeInterval
     {
         if(l > u) std::swap(l, u);
         l = std::max(l, 0.0);
-        u = std::min(u, 1.0);
+        u = std::min(u, std::numeric_limits<double>::infinity());
     }
 
     TimeInterval() : l(0), u(0) {}
@@ -44,8 +83,13 @@ struct TimeInterval
     double l, u;
 };
 
+// dynamics collision finder
+bool findCollisions(Eigen::Vector3d& goal, Eigen::Vector3d& proxy, double toolRadius,
+                       cXPBDDeformableMesh* model, std::vector<ColInfo*>& collisions);
 
-ColInfo findCollisions(Eigen::Vector3d& p_, Eigen::Vector3d& plast_, cXPBDDeformableMesh& model, double &t_);
+// static collision finder
+bool findCollisions(Eigen::Vector3d& proxy, double toolRadius,
+                    cXPBDDeformableMesh* model, std::vector<ColInfo*>& collisions);
 
 class CTCD {
 
@@ -61,6 +105,16 @@ static bool vertexFaceCTCD(const Eigen::Vector3d& q0start,
                            const Eigen::Vector3d& q3end,
                            double eta,
                            double& t);
+
+static bool vertexFaceCTCD(const Eigen::Vector3d& q0start,
+                              const Eigen::Vector3d& q1start,
+                              const Eigen::Vector3d& q2start,
+                              const Eigen::Vector3d& q3start,
+                              const Eigen::Vector3d& q1end,
+                              const Eigen::Vector3d& q2end,
+                              const Eigen::Vector3d& q3end,
+                              double eta,
+                              double& t);
 
 
 private:

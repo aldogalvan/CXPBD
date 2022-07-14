@@ -9,11 +9,6 @@ foreach (example example-01)
     add_definitions (-DTETLIBRARY)
 endforeach ()
 
-foreach (example example-02)
-    file (GLOB source ${example}/*.cpp ${example}/*.h)
-    add_executable (${example} ${source})
-    target_link_libraries (${example} CXPBD )
-endforeach ()
 
 #foreach (example example-CUDA)
  #   find_package(CUDA)

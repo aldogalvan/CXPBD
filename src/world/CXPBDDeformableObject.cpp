@@ -25,11 +25,11 @@ void cXPBDDeformableMesh::connectToChai3d(void)
     }
 }
 
-void cXPBDDeformableMesh::updateChai3d(Eigen::MatrixXd& a_pos)
+void cXPBDDeformableMesh::updateChai3d(void)
 {
     for (int i = 0; i < num_vertices; i++)
     {
-        Eigen::Vector3d vert = a_pos.row(i);
+        Eigen::Vector3d vert = p_.row(i);
         m_vertices->setLocalPos(i,vert.x(),vert.y(),vert.z());
     }
 }
@@ -202,8 +202,29 @@ void cXPBDDeformableMesh::constrain_neohookean_elasticity_potential(
     }
 }
 
+void cXPBDDeformableMesh::computeNormals(positions_type& a_goalPos)
+{
+    // sets the last value for the normals
+    Nlast_ = N_;
+
+    // compute the normals for the object
+    N_.resize(num_faces,3);
+
+    igl::per_face_normals(a_goalPos,F_,N_);
+
+}
+
 void cXPBDDeformableMesh::computeNormals(void)
 {
+
+    // compute the normals for the object
     N_.resize(num_faces,3);
-    igl::per_face_normals(pdes_,F_,N_);
+
+    // compute the normals
+    igl::per_face_normals(p_,F_,N_);
+
+    // sets the last value for the normals
+    Nlast_ = N_;
+
 }
+

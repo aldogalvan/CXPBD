@@ -53,6 +53,7 @@ public:
     elements_type& tetrahedra() { return T_; }
     index_type& numTetrahedra() {return num_tetrahedra;}
     positions_type& normals() {return N_;}
+    positions_type& normals_last() {return Nlast_;}
     constraints_type& constraints() { return constraints_; }
     velocities_type& velocity() { return v_; }
     masses_type& mass() { return m_; }
@@ -64,7 +65,7 @@ public:
     void connectToChai3d(void);
 
     // This method updates the chai3d mesh
-    void updateChai3d(Eigen::MatrixXd& a_pos);
+    void updateChai3d(void);
 
     // Set frozen vertices
     void isFixed(vector<bool> a_fixed)
@@ -72,10 +73,17 @@ public:
         fixed_ = a_fixed;
     }
 
-    // This method sets the ounding box
-    void buildAABBBoundaryBox()
+    // This method builds a static BB
+    void buildAABBBoundaryBox(void)
     {
         bb_ = buildAABB(p_,F_);
+    }
+
+    // this method builds a dynamic bounding box
+    void buildAABBBoundaryBox(Eigen::MatrixXd& a_goalPos)
+    {
+        pdes_ = a_goalPos;
+        bb_ = buildAABB(p_,a_goalPos,F_);
     }
 
     // This method computes the centroid
@@ -174,6 +182,9 @@ public:
 
 
     //  This method computes the normals of the mesh;
+    void computeNormals(positions_type& a_goalPos);
+
+    //  This method computes the normals of the mesh;
     void computeNormals(void);
 
     // This method sets the desired positons of the mest
@@ -223,6 +234,7 @@ private:
     set<index_type> outside;       ///< Set of outside vertice
     index_type out_size;           ///< Size of outside set
     positions_type N_;             ///< Array of normals
+    positions_type Nlast_;
 
 
 };
