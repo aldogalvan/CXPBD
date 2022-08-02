@@ -57,7 +57,6 @@ public:
     constraints_type& constraints() { return constraints_; }
     velocities_type& velocity() { return v_; }
     masses_type& mass() { return m_; }
-    std::vector<bool>& fixed() { return fixed_; }
     std::shared_ptr<AABBNode>& bb(){return bb_;}
     Eigen::VectorXi& fm(){return facemap;}
 
@@ -66,12 +65,6 @@ public:
 
     // This method updates the chai3d mesh
     void updateChai3d(void);
-
-    // Set frozen vertices
-    void isFixed(vector<bool> a_fixed)
-    {
-        fixed_ = a_fixed;
-    }
 
     // This method builds a static BB
     void buildAABBBoundaryBox(void)
@@ -158,6 +151,10 @@ public:
     // This method projects the tetrahedral mesh to the outside mesh
     void projectToSurface(void);
 
+    // This method constrains the nodes
+    void constrain_nodes_positions(std::vector<int> fixed_nodes, scalar_type const compliance = 0.0 ,
+                                   scalar_type const damping = 0.0);
+
     // This method constrains the edge lengths
     void constrain_edge_lengths(scalar_type const compliance = 0.0 , scalar_type const damping = 0.0);
 
@@ -227,7 +224,6 @@ private:
     masses_type m_;                ///< Per-vertex mass_when_unfixed
     velocities_type v_;            ///< Per-vertex velocity
     constraints_type constraints_; ///< PBD constraints
-    std::vector<bool> fixed_;      ///< Flags fixed positions
     std::shared_ptr<AABBNode> bb_; ///< Boundary box for this object
     set<index_type> inside;        ///< Set of inside vertices
     index_type in_size;            ///< Size of inside set

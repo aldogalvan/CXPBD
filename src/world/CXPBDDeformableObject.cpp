@@ -7,6 +7,7 @@
 #include "constraints/CXPBDVolumeConstraint.h"
 #include "constraints/CXPBDNeoHookeanConstraint.h"
 #include "constraints/CXPBDBendingConstraint.h"
+#include "constraints/CXPBDFixedPointConstraint.h"
 #include "include/igl/per_face_normals.h"
 
 void cXPBDDeformableMesh::connectToChai3d(void)
@@ -67,6 +68,27 @@ void cXPBDDeformableMesh::scaleObject(double a_scale)
     p0_ *= a_scale;
     plast_ *= a_scale;
     p_ *= a_scale;
+}
+
+void cXPBDDeformableMesh::constrain_nodes_positions(std::vector<int> fixed_nodes , scalar_type const compliance ,
+                                                    scalar_type const damping)
+{
+    for (auto i = 0u ; i < fixed_nodes.size() ; i++)
+    {
+
+        auto const e = fixed_nodes[i];
+
+        auto const& positions = this->p0();
+
+        auto constraint = std::make_unique<cXPBDFixedPointConstraint>(
+                std::initializer_list<std::uint32_t>{
+                        static_cast<std::uint32_t>(e)},
+                positions,
+                compliance,
+                damping);
+
+        this->constraints().push_back(std::move(constraint));
+    }
 }
 
 void cXPBDDeformableMesh::constrain_edge_lengths(scalar_type const compliance , scalar_type const damping)

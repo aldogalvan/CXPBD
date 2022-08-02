@@ -208,6 +208,28 @@ std::shared_ptr<BBox> buildAABB(Eigen::Ref<const Eigen::Vector3d> pos,
     return box;
 }
 
+std::shared_ptr<BBox> buildAABB(Eigen::Ref<const Eigen::Vector3d> startPos,
+                                Eigen::Ref<const Eigen::Vector3d> endPos)
+{
+    auto box = make_shared<BBox>();
+
+    for (int k = 0; k < 3; k++)
+    {
+        box->mins[k] = numeric_limits<double>::infinity();
+        box->maxs[k] = -numeric_limits<double>::infinity();
+    }
+
+    for (int l = 0; l < 3; l++) {
+        box->mins[l] = min(box->mins[l], startPos(l));
+        box->maxs[l] = max(box->maxs[l], startPos(l));
+        box->mins[l] = min(box->mins[l], endPos(l));
+        box->maxs[l] = max(box->maxs[l], endPos(l));
+    }
+
+
+    return box;
+}
+
 void intersect(std::shared_ptr<AABBNode> left,
                std::shared_ptr<AABBNode> right,
                std::vector<Collision>& collisions)

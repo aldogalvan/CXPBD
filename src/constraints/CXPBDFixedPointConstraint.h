@@ -26,26 +26,21 @@ public:
             positions_type const& p,
             scalar_type const alpha = 0.0,
             scalar_type const beta = 0.0)
-            : base_type(indices, alpha, beta)
+            : base_type(indices, alpha, beta) , p0_{}
     {
-        num_vertices = indices.size();
-        p0_.resize(num_vertices,3);
-        for (int i = 0; i <= num_vertices; i++)
-        {
-            p0_.row(i) = p.row(this->indices()[i]);
-        }
-
+        assert(indices.size() == 1u);
+        p0_ = p.row(this->indices()[0]);
     }
 
     scalar_type evaluate(positions_type const& V, masses_type const& M) const;
-    virtual void
-    project(positions_type& V, positions_type& V0, masses_type const& M,
+
+    virtual void project(positions_type& V, positions_type& V0, masses_type const& M,
             scalar_type& lagrange, scalar_type const dt, gradient_type& F)
     const override;
 
 private:
-    positions_type p0_; ///< rest length
-    index_type num_vertices;
+
+    gradient_type p0_;
 };
 
 

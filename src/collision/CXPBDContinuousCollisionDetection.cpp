@@ -9,7 +9,7 @@
 
 using namespace std;
 
-static void Barycentric(float out[3], const Eigen::Vector3d& A, const Eigen::Vector3d& B, const Eigen::Vector3d& Q)
+static void Barycentric(double out[3], const Eigen::Vector3d& A, const Eigen::Vector3d& B, const Eigen::Vector3d& Q)
 {
     Eigen::Vector3d AB = B - A;
     Eigen::Vector3d QA = A - Q;
@@ -25,7 +25,7 @@ static void Barycentric(float out[3], const Eigen::Vector3d& A, const Eigen::Vec
 // Convert a point Q from Cartesian coordinates to Barycentric coordinates (u, v, w)
 // with respect to a triangle ABC.
 // The last output value is the divisor.
-static void Barycentric(float out[4], const Eigen::Vector3d& A, const Eigen::Vector3d& B, const Eigen::Vector3d& C,
+static void Barycentric(double out[4], const Eigen::Vector3d& A, const Eigen::Vector3d& B, const Eigen::Vector3d& C,
                         const Eigen::Vector3d& Q)
 {
     Eigen::Vector3d AB = B - A;
@@ -41,7 +41,7 @@ static void Barycentric(float out[4], const Eigen::Vector3d& A, const Eigen::Vec
 
     Eigen::Vector3d AB_x_AC = AB.cross(AC);
 
-    float divisor = AB_x_AC.dot(AB_x_AC);
+    double divisor = AB_x_AC.dot(AB_x_AC);
 
     out[0] = QB_x_QC.dot(AB_x_AC);
     out[1] = QC_x_QA.dot(AB_x_AC);
@@ -55,7 +55,7 @@ bool SolvePoint(const Eigen::Vector3d& A, const Eigen::Vector3d& B, const Eigen:
                 Eigen::Vector3d& p)
 {
     // Test vertex regions
-    float wAB[3], wBC[3], wCA[3];
+    double wAB[3], wBC[3], wCA[3];
     Barycentric(wAB, A, B, Q);
     Barycentric(wBC, B, C, Q);
     Barycentric(wCA, C, A, Q);
@@ -82,7 +82,7 @@ bool SolvePoint(const Eigen::Vector3d& A, const Eigen::Vector3d& B, const Eigen:
     }
 
     // Test edge regions
-    float wABC[4];
+    double wABC[4];
     Barycentric(wABC, A, B, C, Q);
 
     // This is used to help testing if the face degenerates
@@ -149,7 +149,7 @@ bool TimeInterval::overlap(const std::vector<TimeInterval> &intervals)
 
 TimeInterval TimeInterval::intersect(const std::vector<TimeInterval> &intervals)
 {
-    TimeInterval isect(0.0, std::numeric_limits<double>::infinity());
+    TimeInterval isect(0.0, 1.0);
     for(std::vector<TimeInterval>::const_iterator it = intervals.begin(); it != intervals.end(); ++it)
     {
         isect.l = max(it->l, isect.l);
@@ -184,8 +184,8 @@ void CTCD::checkInterval(double t1, double t2, double * op, int degree, vector<T
     // clamp values
     t1 = max(0.0, t1);
     t2 = max(0.0, t2);
-    t1 = min(std::numeric_limits<double>::infinity(), t1);
-    t2 = min(std::numeric_limits<double>::infinity(), t2);
+    t1 = min(1.0, t1);
+    t2 = min(1.0, t2);
 
     double tmid = (t2 + t1) / 2;
     double f = op[0];
@@ -275,7 +275,7 @@ void CTCD::findIntervals(double *op, int n, vector<TimeInterval> & intervals, bo
     {
         // both points stationary -- check if colliding at t=0
         if ((!pos && op[0] <= 0) || (pos && op[0] >= 0))
-            intervals.push_back(TimeInterval(0, std::numeric_limits<double>::infinity()));
+            intervals.push_back(TimeInterval(0, 1.0));
         return;
     }
 
@@ -286,16 +286,15 @@ void CTCD::findIntervals(double *op, int n, vector<TimeInterval> & intervals, bo
         if (time[0] >= 0)
             checkInterval(0, time[0], op, reducedDegree, intervals, pos);
         for (int i = 0; i < roots - 1; i++) {
-            // if (!((time[i] < 0 && time[i + 1] < 0) || (time[i] > 1.0 && time[i + 1] > 1.0)))
-            if (!((time[i] < 0 && time[i + 1] < 0) ))
+            if (!((time[i] < 0 && time[i + 1] < 0) || (time[i] > 1.0 && time[i + 1] > 1.0)))
                 checkInterval(time[i], time[i + 1], op, reducedDegree, intervals, pos);
         }
         if (time[roots - 1] <= 1.0)
-            checkInterval(time[roots - 1], std::numeric_limits<double>::infinity(), op, reducedDegree, intervals, pos);
+            checkInterval(time[roots - 1], 1.0, op, reducedDegree, intervals, pos);
     }
     else
     {
-        checkInterval(0.0, std::numeric_limits<double>::infinity(), op, reducedDegree, intervals, pos);
+        checkInterval(0.0, 1.0, op, reducedDegree, intervals, pos);
     }
 }
 
@@ -343,6 +342,7 @@ void CTCD::planePoly3D(const Eigen::Vector3d &x10,
                        const Eigen::Vector3d &v30,
                        vector<TimeInterval> &result)
 {
+
     double op[4];
     op[0] = v10.dot(v20.cross(v30));
     op[1] = x10.dot(v20.cross(v30)) + v10.dot(x20.cross(v30)) + v10.dot(v20.cross(x30));
@@ -379,6 +379,7 @@ void CTCD::distancePoly3D(const Eigen::Vector3d &x10,
     findIntervals(op, 6, result, false);
 }
 
+
 // Dynamic collison : Checks for collison along path of goal and proxy
 bool findCollisions(Eigen::Vector3d& goal, Eigen::Vector3d& proxy, double toolRadius,
                        cXPBDDeformableMesh* model, std::vector<ColInfo*>& collisions)
@@ -388,12 +389,12 @@ bool findCollisions(Eigen::Vector3d& goal, Eigen::Vector3d& proxy, double toolRa
     bool ret = 0;
 
     // Builds a bounding box for the tool
-    auto toolBB_ = buildAABB(goal,proxy,toolRadius);
+    auto toolBB_ = buildAABB(goal,proxy);
 
     // Get the object primitives
     const auto& f_ = model->faces();
-    const auto& v_ = model->positions();
-    const auto& vlast_ = model->positions();
+    const auto& p_ = model->positions();
+    const auto& plast_ = model->positions_last();
     auto& N_ = model->normals();
     auto& Nlast_ = model->normals_last();
 
@@ -404,147 +405,62 @@ bool findCollisions(Eigen::Vector3d& goal, Eigen::Vector3d& proxy, double toolRa
     for (const auto& it : potentialCollisions) {
         // define collision info
         Eigen::Vector3i face = f_.row(it.collidingTriangle2);
-        Eigen::Vector3d A0 = vlast_.row(face(0));
-        Eigen::Vector3d B0 = vlast_.row(face(1));
-        Eigen::Vector3d C0  = vlast_.row(face(2));
+        Eigen::Vector3d A0 = plast_.row(face(0));
+        Eigen::Vector3d B0 = plast_.row(face(1));
+        Eigen::Vector3d C0 = plast_.row(face(2));
         Eigen::Vector3d N0 = Nlast_.row(it.collidingTriangle2);
-        Eigen::Vector3d A1 = v_.row(face(0));
-        Eigen::Vector3d B1 = v_.row(face(1));
-        Eigen::Vector3d C1 = v_.row(face(2));
+        Eigen::Vector3d A1 = p_.row(face(0));
+        Eigen::Vector3d B1 = p_.row(face(1));
+        Eigen::Vector3d C1 = p_.row(face(2));
         Eigen::Vector3d N1 = N_.row(it.collidingTriangle2);
 
         // time of collision
         double t_;
 
-        // index counter
-        int counter = 0;
-
         if (CTCD::vertexFaceCTCD(
-                proxy ,
+                proxy,
                 A0.transpose(),
                 B0.transpose(),
                 C0.transpose(),
-                goal ,
+                goal,
                 A1.transpose(),
                 B1.transpose(),
                 C1.transpose(),
                 1e-6,
                 t_))
         {
-            // check what type of collision it is
+
+            double ep = 0.001;
+            int idx = collisions.size();
 
             // Create a new collision object
             collisions.emplace_back(new ColInfo);
 
             // update collision info
-            collisions[counter]->t = t_;
+            collisions[idx]->t = t_;
+            collisions[idx]->triangle = face;
 
-            // get the triangle on collision
-            Eigen::Vector3d Ac;
-            Eigen::Vector3d Bc;
-            Eigen::Vector3d Cc;
-            Eigen::Vector3d Nc;
+            // Triangle at collision
+            Eigen::Vector3d Ac = A0 + t_*(A1 - A0);
+            Eigen::Vector3d Bc = B0 + t_*(B1 - B0);
+            Eigen::Vector3d Cc = C0 + t_*(C1 - C0);
 
-            // get the proxy on collision
-            Eigen::Vector3d Pc;
+            // proxy at collision
+            Eigen::Vector3d proxy_c = proxy + t_*(goal - proxy);
 
-            // save normals
-            collisions[counter]->normal0 = N0;
-            collisions[counter]->normal1 = N1;
+            // Barycentric coordinates on collision
+            double out[4];
+            Barycentric(out,Ac,Bc,Cc,proxy_c);
 
-            // case where the proxy collides within the time interval
-            if (t_ < 1.0)
-            {
+            // move to barycentric coordinates
+            proxy = out[0]*A1/out[3] + out[1]*B1/out[3] + out[2]*C1/out[3];
 
-                // triangle vertices and normal on collision
-                Ac = (A1 - A0) * t_ + A0;
-                Bc = (B1 - B0) * t_ + B0;
-                Cc = (C1 - C0) * t_ + C0;
-                Nc = (N1 - N0) * t_ + N0;
+            // adjust a bit in normal direction to account
+            // for numerical errors
+            proxy -= N1.normalized() * ep;
 
-                // proxy position on collision
-                Pc = (goal - proxy) * t_ + proxy;
-
-                // get barycentric coordinates
-                double area = ((Ac - Bc).cross(Ac - Cc)).norm()/2;
-                double alpha = ((Pc - Bc).cross(Pc - Cc)).norm()/(area*2);
-                double beta = ((Pc - Cc).cross(Pc - Ac)).norm()/(area*2);
-                double gamma = 1 - alpha - beta;
-
-                // std::cout << " : alpha , " << alpha << " : beta , " << beta << " : gamma , " << gamma << std::endl;
-
-                // check if center of proxy is within triangle
-                if ( 0 <= alpha <= 1 && 0 <= beta <= 1 && 0 <= gamma <= 1)
-                {
-                    // if inside then face collision
-                    collisions[counter]->type = FACECOLLISION;
-                    collisions[counter]->alpha = alpha;
-                    collisions[counter]->beta = beta;
-                    collisions[counter]->gamma = gamma;
-                    collisions[counter]->normalc = Nc;
-
-                    // std::cout << "INSIDE" << std::endl;
-
-                }
-                else
-                {
-                    // if not inside then find the closest point on triangle
-                    // and test is closer than tool radius
-                    // std::cout << "OUTSIDE" << std::endl;
-                }
-
-            }
-            // proxy collides outside of time interval
-            else
-            {
-                // get barycentric coordinates
-                double area = ((A1 - B1).cross(A1 - C1)).norm()/2;
-                double alpha = ((proxy - B1).cross(proxy - C1)).norm()/(area*2);
-                double beta = ((proxy - C1).cross(proxy - A1)).norm()/(area*2);
-                double gamma = 1 - alpha - beta;
-
-                // check if center of proxy is within triangle
-                if ( 0 <= alpha <= 1 && 0 <= beta <= 1 && 0 <= gamma <= 1)
-                {
-                    // if inside then face collision
-                    collisions[counter]->type = FACECOLLISION;
-                    collisions[counter]->alpha = alpha;
-                    collisions[counter]->beta = beta;
-                    collisions[counter]->gamma = gamma;
-                    collisions[counter]->normalc = Nc;
-
-                    // Find closest point on the triangle
-                    Eigen::Vector3d cp;
-
-                    // find the closest point on the triangle
-                    SolvePoint(A1,B1,C1,proxy,cp);
-
-                    // TODO: MAKE SURE TO CORRECTLY HANDLE COLLISION WITH SPHERE
-
-                    if ((proxy - cp).squaredNorm() < toolRadius*toolRadius)
-                    {
-
-                    }
-
-                    // std::cout << "INSIDE" << std::endl;
-
-                }
-                else
-                {
-                    // if not inside then find the closest point on triangle
-                    // and test is closer than tool radius
-                    // std::cout << "OUTSIDE" << std::endl;
-                }
-
-            }
-
-            // flag
             ret = 1;
-
-            // increment counter
-            counter++;
         }
-
     }
     return ret;
 
@@ -573,6 +489,7 @@ bool findCollisions(Eigen::Vector3d& proxy, double toolRadius,
     int it_count = 0;
 
     for (const auto& it : potentialCollisions) {
+
         // define collision info
         Eigen::Vector3i face = f_.row(it.collidingTriangle2);
         Eigen::Vector3d A0 = vlast_.row(face(0));
@@ -621,8 +538,6 @@ bool findCollisions(Eigen::Vector3d& proxy, double toolRadius,
             // save normals
             collisions[counter]->normal0 = N0;
             collisions[counter]->normal1 = N1;
-
-            std::cout << t_ << std::endl;
 
             // case where the proxy collides within the time interval
             if (t_ < 1.0)
@@ -699,7 +614,6 @@ bool CTCD::vertexFaceCTCD(const Eigen::Vector3d& q0start,
                           double eta,
                           double& t)
 {
-
     double mind = eta*eta;
 
     Eigen::Vector3d v0 = q0end - q0start;
@@ -772,13 +686,14 @@ bool CTCD::vertexFaceCTCD(const Eigen::Vector3d& q0start,
                     intervals.push_back(e3[l]);
                     if(TimeInterval::overlap(intervals))
                     {
-                        mint = TimeInterval::intersect(intervals).l;
+                        mint = std::min(TimeInterval::intersect(intervals).l, mint);
                         col = true;
                     }
                 }
             }
         }
     }
+
 
     if(col)
     {

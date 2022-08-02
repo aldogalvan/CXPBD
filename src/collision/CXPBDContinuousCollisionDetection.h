@@ -28,22 +28,13 @@ struct ColInfo {
     double t;
 
     // Index of collided triangle
-    int triangleIndex;
+    Eigen::Vector3i triangle;
 
     // Indices making up edge
     pair<int,int> edge;
 
     // Index of vertex
     int vertex;
-
-    // Position of triangle at t1
-    Eigen::Matrix3d triangle1;
-
-    // Position of triangle at t0
-    Eigen::Matrix3d triangle0;
-
-    // Position of triangle at tc
-    Eigen::Matrix3d trianglec;
 
     // Normal of triangle at t1
     Eigen::Vector3d normal1;
@@ -68,7 +59,7 @@ struct TimeInterval
     {
         if(l > u) std::swap(l, u);
         l = std::max(l, 0.0);
-        u = std::min(u, std::numeric_limits<double>::infinity());
+        u = std::min(u, 1.0);
     }
 
     TimeInterval() : l(0), u(0) {}

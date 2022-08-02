@@ -1,3 +1,7 @@
+//
+// Created by agalvan-admin on 7/26/22.
+//
+
 
 //------------------------------------------------------------------------------
 #include "chai3d.h"
@@ -132,8 +136,9 @@ cGenericHapticDevicePtr hapticDevice;
 // the radius of the tool
 double toolRadius;
 
-// the line used for visualization
-cShapeLine* tool;
+// the lines used for gripping
+cShapeLine* toolgripper1;
+cShapeLine* toolgripper2;
 
 // the length of the tool used for visualizetion
 double toolLength = 0.1;
@@ -182,14 +187,14 @@ void close(void);
 void createTetrahedralMesh(void);
 
 // this function progresses time
-void updateDynamics(Eigen::MatrixXd& fext, double& dt, std::uint32_t iterations, bool gravityEnabled);
+void timestep(Eigen::MatrixXd& fext, double& timestep, std::uint32_t iterations, bool gravityEnabled);
 
 // this function computes the collision constraints
 void proxyCollision(Eigen::Vector3d& goal_ , Eigen::Vector3d& proxy_, Eigen::MatrixXd& p_, Eigen::MatrixXd& plast_,
-                                 cXPBDDeformableMesh* a_mesh, double t_, const ColInfo& collisions);
+                    cXPBDDeformableMesh* a_mesh, double t_, const ColInfo& collisions);
 
 void implicitCollision(Eigen::Vector3d& goal_ , Eigen::Vector3d& proxy_, Eigen::MatrixXd& p_, Eigen::MatrixXd& plast_,
-                                        cXPBDDeformableMesh* a_mesh, double t_, const ColInfo& collisions);
+                       cXPBDDeformableMesh* a_mesh, double t_, const ColInfo& collisions);
 
 void testFriction(Eigen::Vector3d& goal_ , Eigen::Vector3d& proxy_, Eigen::MatrixXd& p_, Eigen::MatrixXd& plast_,
                   cXPBDDeformableMesh* a_mesh, double t_, const ColInfo& collisions);
@@ -392,10 +397,10 @@ int main(int argc, char* argv[])
     xpbd_mesh->setVelocities(vel);
 
     // apply edge length constraint
-    xpbd_mesh->constrain_edge_lengths(0.1,0.00);
+    xpbd_mesh->constrain_edge_lengths(0.05,0.00);
 
     // apply tetrahedron volume constraint
-    xpbd_mesh->constrain_tetrahedron_volumes(0.00,0.00);
+    xpbd_mesh->constrain_tetrahedron_volumes(0.0,0.00);
 
     // wireframe vis
     xpbd_mesh->setWireMode(true,true);
@@ -404,22 +409,27 @@ int main(int argc, char* argv[])
     toolRadius = 0.01;
 
     // add the line to the world
-    world->addChild(tool);
+    world->addChild(toolgripper1);
+
+    // add the line to the world
+    world->addChild(toolgripper2);
 
     // set last positions
     xpbd_mesh->setVerticesLast();
 
-    //finds the indices at the bottom
+    //finds the indices at the bottm
     auto pos = xpbd_mesh->positions();
 
-    vector<int> indices;
+    vector<int> indices(xpbd_mesh->numVerts());
 
     for (int i = 0; i < xpbd_mesh->numVerts() ; i++)
     {
         double height = pos(i,2);
 
         if (height < -.149)
+        {
             indices.emplace_back(i);
+        }
     }
 
     // Sets indices as fixed
@@ -478,6 +488,8 @@ int main(int argc, char* argv[])
 
     // call window size callback at initialization
     windowSizeCallback(window, width, height);
+
+    double dt = 0.001;
 
     // main graphic loop
     while (!glfwWindowShouldClose(window))
@@ -626,6 +638,7 @@ void mouseMotionCallback(GLFWwindow* a_window, double a_posX, double a_posY)
         // assign new angles
         camera->setSphericalAzimuthDeg(azimuthDeg);
         camera->setSphericalPolarDeg(polarDeg);
+
     }
 }
 
@@ -712,29 +725,39 @@ void updateHaptics(void)
 
     // declare some variables
     cVector3d pos;
-    cVector3d vel;
-    cVector3d proxy;
-    cMatrix3d theta;
-    cMatrix3d omega;
+    cVector3d posgripperthumb;
+    cVector3d proxygripperthumb;
+    cVector3d posgripperfinger;
+    cVector3d proxygripperfinger;
+    double theta;
     cVector3d force;
-    cVector3d torque;
+    double gripperForce;
+
+
 
     // get initial position
     hapticDevice->getPosition(pos);
 
+    // get gripper angle
+    hapticDevice->getGripperAngleRad(theta);
+
     // get the rotation
-    hapticDevice->getRotation(theta);
+    hapticDevice->getRotation(rot);
 
     // create the line representing tool
-    tool = new cShapeLine(pos , pos + toolLength*cVector3d(0,0,1));
-    world->addChild(tool);
+    toolgripper1 = new cShapeLine(pos , pos + toolLength*cVector3d(0,0,1));
+    world->addChild(toolgripper1);
+    toolgripper2 = new cShapeLine(pos , pos + toolLength*cVector3d(0,0,1));
+    world->addChild(toolgripper2);
 
     // set color at each point
-    tool->m_colorPointA.setWhite();
-    tool->m_colorPointB.setWhite();
+    toolgripper1->m_colorPointA.setWhite();
+    toolgripper1->m_colorPointB.setWhite();
+    toolgripper2->m_colorPointA.setWhite();
+    toolgripper2->m_colorPointB.setWhite();
 
     // stiffess constant
-    double k = 250;
+    double k = 400;
     double b = 1;
 
     // friction coefficient
@@ -747,25 +770,20 @@ void updateHaptics(void)
     // main haptic simulation loop
     while(simulationRunning) {
 
-
         /////////////////////////////////////////////////////////////////////
         // HAPTIC FORCE COMPUTATION
         /////////////////////////////////////////////////////////////////////
 
         // sets the force equal zero
         force = cVector3d(0,0,0);
-        torque = cVector3d(0,0,0);
 
-        // gets the position
+        // gets the current position
         hapticDevice->getPosition(pos);
 
-        // gets the velocity
-        hapticDevice->getLinearVelocity(vel);
-
         // get the rotation
-        hapticDevice->getRotation(theta);
+        hapticDevice->getRotation(rot);
 
-        // get the rotational velocity
+        //std::cout << "H" << std::endl;
 
         // change to eigen
         Eigen::Vector3d posEigen = pos.eigen(); Eigen::Vector3d proxyEigen = proxy.eigen();
@@ -776,32 +794,36 @@ void updateHaptics(void)
         // computes the proxy
         if (findCollisions(posEigen, proxyEigen, toolRadius, xpbd_mesh, collisions))
         {
+
+
             for (int i = 0u; i  < collisions.size() ; i++)
             {
                 Eigen::Vector3i idx = collisions[i]->triangle;
-                Eigen::Vector3d force_eigen = k*(proxyEigen - posEigen) - b*vel.eigen();
+                Eigen::Vector3d force_eigen = k*(proxyEigen - posEigen);
                 externalForce.row(idx(0)) += -force_eigen / 3;
                 externalForce.row(idx(1)) += -force_eigen / 3;
                 externalForce.row(idx(2)) += -force_eigen / 3;
-                force = force_eigen;
-                torque = cCross(-toolLength*cMul(theta,cVector3d(0,0,1)), force);
+                //force = force_eigen;
+
             }
+
+            // update the dynamics
+            timestep(externalForce, dt,5,true);
+
+
         }
         else
         {
             proxy = pos;
         }
 
-
-        // update the dynamics
-        updateDynamics(externalForce, dt,1,true);
-
         // sets the force equal zero
         hapticDevice->setForceAndTorqueAndGripperForce(force,cVector3d(0,0,0),0);
 
         // draw the tool
-        tool->m_pointA = cVector3d(proxyEigen);
-        tool->m_pointB = cVector3d(proxyEigen) + toolLength*cMul(theta,cVector3d(0,0,1));
+        ->m_pointA = cVector3d(proxyEigen);
+        tool->m_pointB = cVector3d(proxyEigen) + toolLength*cMul(rot,cVector3d(0,0,1));
+
 
         // signal frequency counter
         freqCounterHaptics.signal(1);
@@ -955,70 +977,74 @@ void createTetrahedralMesh(void)
 
     Eigen::VectorXd mass;
     mass.setOnes(xpbd_mesh->numVerts());
-    mass *= .001;
+    mass *= .0001;
     xpbd_mesh->setMass(mass);
 }
 
-void updateDynamics(Eigen::MatrixXd& fext, double& dt, std::uint32_t iterations,
-                          bool gravityEnabled)
+void timestep(
+        Eigen::MatrixXd& fext,
+        double& timestep,
+        std::uint32_t iterations,
+        bool gravityEnabled)
 {
 
-        // all object constraints
-        auto const& constraints   = xpbd_mesh->constraints();
+    // start of timestep clock
+    cPrecisionClock clock1;
+    clock1.start(true);
 
-        // number of constraints
-        auto const J = constraints.size();
+    // all object constraints
+    auto const& constraints   = xpbd_mesh->constraints();
 
-        // vector of lagrange multipliers
-        std::vector<double> lagrange_multipliers(J, 0.);
+    // number of constraints
+    auto const J = constraints.size();
 
-        // gets the object velocity and positions
-        auto& v = xpbd_mesh->velocity();
-        auto& x = xpbd_mesh->positions();
+    // vector of lagrange multipliers
+    std::vector<double> lagrange_multipliers(J, 0.);
 
-        // get the mass and acceleration
-        auto const& m = xpbd_mesh->mass();
-        Eigen::MatrixX3d a = fext.array().colwise() / m.array();
-        if (gravityEnabled)
-            a.rowwise() -= Eigen::RowVector3d(0,0,9.81);
+    // gets the object velocity and positions
+    auto& v = xpbd_mesh->velocity();
+    auto& x = xpbd_mesh->positions();
 
-        // set the force as zero
-        fext.setZero();
+    // get the mass and acceleration
+    auto const& m = xpbd_mesh->mass();
+    Eigen::MatrixX3d a = fext.array().colwise() / m.array();
 
-        // explicit euler step
-        auto vexplicit =  v + dt * a;
-        Eigen::MatrixXd p = x + dt * vexplicit;
+    // set the force as zero
+    fext.setZero();
 
-        // compute a new boundary box
-        xpbd_mesh->buildAABBBoundaryBox(p);
+    // explicit euler step
+    auto vexplicit =  v + timestep * a;
+    Eigen::MatrixXd p = x + timestep * vexplicit;
 
-        // computes new normals
-        xpbd_mesh->computeNormals(p);
+    // compute a new boundary box
+    xpbd_mesh->buildAABBBoundaryBox(p);
 
-        // sequential gauss seidel type solve
-        std::fill(lagrange_multipliers.begin(), lagrange_multipliers.end(), 0.0);
-        Eigen::Vector3d F(0,0,0);
+    // computes new normals
+    xpbd_mesh->computeNormals(p);
 
-        for (auto n = 0u; n < iterations; ++n)
+    // sequential gauss seidel type solve
+    std::fill(lagrange_multipliers.begin(), lagrange_multipliers.end(), 0.0);
+    Eigen::Vector3d F(0,0,0);
+
+    for (auto n = 0u; n < iterations; ++n)
+    {
+        for (auto j = 0u; j < J; ++j)
         {
-            for (auto j = 0u; j < J; ++j)
-            {
-                auto const& constraint = constraints[j];
-                constraint->project(p, x, m, lagrange_multipliers[j], dt,F);
-            }
+            auto const& constraint = constraints[j];
+            constraint->project(p, x, m, lagrange_multipliers[j], timestep,F);
         }
+    }
 
-        // set the last positions
-        xpbd_mesh->setVerticesLast();
+    // set the last positions
+    xpbd_mesh->setVerticesLast();
 
-        // update solution
-        for (auto i = 0u; i < x.rows(); ++i)
-        {
-                v.row(i) = (p.row(i) - x.row(i)) / dt;
-                x.row(i) = p.row(i);
+    // update solution
+    for (auto i = 0u; i < x.rows(); ++i)
+    {
+        v.row(i) = (p.row(i) - x.row(i)) / timestep;
+        x.row(i) = p.row(i);
 
-        }
+    }
 
-        xpbd_mesh->updateChai3d();
 }
-//--------------------
+
