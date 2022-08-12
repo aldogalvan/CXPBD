@@ -60,7 +60,6 @@ void cXPBDDeformableMesh::setLocalPos(Eigen::Vector3d a_pos)
         p0_.row(i) += trans;
         p_.row(i) += trans;
     }
-
 }
 
 void cXPBDDeformableMesh::scaleObject(double a_scale)

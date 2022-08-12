@@ -725,21 +725,30 @@ void updateHaptics(void)
 
     // declare some variables
     cVector3d pos;
-    cVector3d posgripperthumb;
-    cVector3d proxygripperthumb;
-    cVector3d posgripperfinger;
-    cVector3d proxygripperfinger;
-    double theta;
+    cVector3d proxyPos;
+    cVector3d thumbPos;
+    cVector3d thumbProxyPos;
+    cVector3d fingerPos;
+    cVector3d fingerProxyPos;
+    double gripperAngularVel;
+    double gripperAngle;
+    double gripperProxyAngle;
     cVector3d force;
     double gripperForce;
-
-
+    cMatrix3d rot;
 
     // get initial position
     hapticDevice->getPosition(pos);
+    hapticDevice->getGripperThumbPos(thumbPos);
+    hapticDevice->getGripperFingerPos(fingerPos);
+
+    // set the initial proxy
+    proxyPos = pos;
+    fingerProxyPos = fingerPos;
+    thumbProxyPos = thumbPos;
 
     // get gripper angle
-    hapticDevice->getGripperAngleRad(theta);
+    hapticDevice->getGripperAngleRad(gripperAngle);
 
     // get the rotation
     hapticDevice->getRotation(rot);
@@ -779,27 +788,32 @@ void updateHaptics(void)
 
         // gets the current position
         hapticDevice->getPosition(pos);
+        hapticDevice->getGripperThumbPos(thumbPos);
+        hapticDevice->getGripperFingerPos(fingerPos);
+
+        // get the gripper angle and velocity
+        hapticDevice->getGripperAngleRad(gripperAngle);
+        hapticDevice->getGripperAngularVelocity(gripperAngularVel);
 
         // get the rotation
         hapticDevice->getRotation(rot);
 
-        //std::cout << "H" << std::endl;
-
         // change to eigen
-        Eigen::Vector3d posEigen = pos.eigen(); Eigen::Vector3d proxyEigen = proxy.eigen();
+        Eigen::Vector3d thumbPosEigen = thumbPos.eigen();
+        Eigen::Vector3d thumbProxyPosEigen = thumbProxyPos.eigen();
 
         // collision info structure
         std::vector<ColInfo*> collisions;
 
-        // computes the proxy
-        if (findCollisions(posEigen, proxyEigen, toolRadius, xpbd_mesh, collisions))
+        // computes the proxy for the thumb
+        if (findCollisions(thumbPosEigen, thumbProxyPosEigen, toolRadius, xpbd_mesh, collisions))
         {
 
 
             for (int i = 0u; i  < collisions.size() ; i++)
             {
                 Eigen::Vector3i idx = collisions[i]->triangle;
-                Eigen::Vector3d force_eigen = k*(proxyEigen - posEigen);
+                Eigen::Vector3d force_eigen = k*(thumbProxyPosEigen - thumbPosEigen);
                 externalForce.row(idx(0)) += -force_eigen / 3;
                 externalForce.row(idx(1)) += -force_eigen / 3;
                 externalForce.row(idx(2)) += -force_eigen / 3;
@@ -814,15 +828,39 @@ void updateHaptics(void)
         }
         else
         {
-            proxy = pos;
+            thumbProxyPos = thumbPos;
+        }
+
+        Eigen::Vector3d fingerPosEigen = fingerPos.eigen();
+        Eigen::Vector3d fingerProxyPosEigen = fingerProxyPos.eigen();
+
+        if (findCollisions(fingerPosEigen, fingerProxyPosEigen, toolRadius, xpbd_mesh, collisions))
+        {
+
+
+            for (int i = 0u; i  < collisions.size() ; i++)
+            {
+                Eigen::Vector3i idx = collisions[i]->triangle;
+                Eigen::Vector3d force_eigen = k*(fingerProxyPosEigen - fingerPosEigen);
+                externalForce.row(idx(0)) += -force_eigen / 3;
+                externalForce.row(idx(1)) += -force_eigen / 3;
+                externalForce.row(idx(2)) += -force_eigen / 3;
+                //force = force_eigen;
+
+            }
+
+            // update the dynamics
+            timestep(externalForce, dt,5,true);
+
+
+        }
+        else
+        {
+            fingerPos = fingerProxyPos;
         }
 
         // sets the force equal zero
         hapticDevice->setForceAndTorqueAndGripperForce(force,cVector3d(0,0,0),0);
-
-        // draw the tool
-        ->m_pointA = cVector3d(proxyEigen);
-        tool->m_pointB = cVector3d(proxyEigen) + toolLength*cMul(rot,cVector3d(0,0,1));
 
 
         // signal frequency counter

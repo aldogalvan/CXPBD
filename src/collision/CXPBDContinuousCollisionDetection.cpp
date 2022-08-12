@@ -7,13 +7,12 @@
 #include "../../shared/rpoly.h"
 #include "CXPBDAABB.h"
 
-using namespace std;
 
-static void Barycentric(double out[3], const Eigen::Vector3d& A, const Eigen::Vector3d& B, const Eigen::Vector3d& Q)
+static void Barycentric(double out[3], const Vector3d& A, const Vector3d& B, const Vector3d& Q)
 {
-    Eigen::Vector3d AB = B - A;
-    Eigen::Vector3d QA = A - Q;
-    Eigen::Vector3d QB = B - Q;
+    Vector3d AB = B - A;
+    Vector3d QA = A - Q;
+    Vector3d QB = B - Q;
 
     float divisor = AB.dot(AB);
 
@@ -25,21 +24,21 @@ static void Barycentric(double out[3], const Eigen::Vector3d& A, const Eigen::Ve
 // Convert a point Q from Cartesian coordinates to Barycentric coordinates (u, v, w)
 // with respect to a triangle ABC.
 // The last output value is the divisor.
-static void Barycentric(double out[4], const Eigen::Vector3d& A, const Eigen::Vector3d& B, const Eigen::Vector3d& C,
-                        const Eigen::Vector3d& Q)
+static void Barycentric(double out[4], const Vector3d& A, const Vector3d& B, const Vector3d& C,
+                        const Vector3d& Q)
 {
-    Eigen::Vector3d AB = B - A;
-    Eigen::Vector3d AC = C - A;
+    Vector3d AB = B - A;
+    Vector3d AC = C - A;
 
-    Eigen::Vector3d QA = A - Q;
-    Eigen::Vector3d QB = B - Q;
-    Eigen::Vector3d QC = C - Q;
+    Vector3d QA = A - Q;
+    Vector3d QB = B - Q;
+    Vector3d QC = C - Q;
 
-    Eigen::Vector3d QB_x_QC = QB.cross(QC);
-    Eigen::Vector3d QC_x_QA = QC.cross(QA);
-    Eigen::Vector3d QA_x_QB = QA.cross(QB);
+    Vector3d QB_x_QC = QB.cross(QC);
+    Vector3d QC_x_QA = QC.cross(QA);
+    Vector3d QA_x_QB = QA.cross(QB);
 
-    Eigen::Vector3d AB_x_AC = AB.cross(AC);
+    Vector3d AB_x_AC = AB.cross(AC);
 
     double divisor = AB_x_AC.dot(AB_x_AC);
 
@@ -51,8 +50,8 @@ static void Barycentric(double out[4], const Eigen::Vector3d& A, const Eigen::Ve
 
 
 // Return the closest point on a triangle ABC to a point Q.
-bool SolvePoint(const Eigen::Vector3d& A, const Eigen::Vector3d& B, const Eigen::Vector3d& C, const Eigen::Vector3d& Q,
-                Eigen::Vector3d& p)
+bool SolvePoint(const Vector3d& A, const Vector3d& B, const Vector3d& C, const Vector3d& Q,
+                Vector3d& p)
 {
     // Test vertex regions
     double wAB[3], wBC[3], wCA[3];
@@ -298,12 +297,12 @@ void CTCD::findIntervals(double *op, int n, vector<TimeInterval> & intervals, bo
     }
 }
 
-void CTCD::barycentricPoly3D(const Eigen::Vector3d &x10,
-                             const Eigen::Vector3d &x20,
-                             const Eigen::Vector3d &x30,
-                             const Eigen::Vector3d &v10,
-                             const Eigen::Vector3d &v20,
-                             const Eigen::Vector3d &v30,
+void CTCD::barycentricPoly3D(const Vector3d &x10,
+                             const Vector3d &x20,
+                             const Vector3d &x30,
+                             const Vector3d &v10,
+                             const Vector3d &v20,
+                             const Vector3d &v30,
                              vector<TimeInterval> &result)
 {
     // alpha > 0
@@ -334,12 +333,12 @@ void CTCD::barycentricPoly3D(const Eigen::Vector3d &x10,
     findIntervals(op, 4, result, true);
 }
 
-void CTCD::planePoly3D(const Eigen::Vector3d &x10,
-                       const Eigen::Vector3d &x20,
-                       const Eigen::Vector3d &x30,
-                       const Eigen::Vector3d &v10,
-                       const Eigen::Vector3d &v20,
-                       const Eigen::Vector3d &v30,
+void CTCD::planePoly3D(const Vector3d &x10,
+                       const Vector3d &x20,
+                       const Vector3d &x30,
+                       const Vector3d &v10,
+                       const Vector3d &v20,
+                       const Vector3d &v30,
                        vector<TimeInterval> &result)
 {
 
@@ -351,12 +350,12 @@ void CTCD::planePoly3D(const Eigen::Vector3d &x10,
     findIntervals(op, 3, result, true);
 }
 
-void CTCD::distancePoly3D(const Eigen::Vector3d &x10,
-                          const Eigen::Vector3d &x20,
-                          const Eigen::Vector3d &x30,
-                          const Eigen::Vector3d &v10,
-                          const Eigen::Vector3d &v20,
-                          const Eigen::Vector3d &v30,
+void CTCD::distancePoly3D(const Vector3d &x10,
+                          const Vector3d &x20,
+                          const Vector3d &x30,
+                          const Vector3d &v10,
+                          const Vector3d &v20,
+                          const Vector3d &v30,
                           double minDSquared,
                           vector<TimeInterval> &result)
 {
@@ -364,9 +363,9 @@ void CTCD::distancePoly3D(const Eigen::Vector3d &x10,
     double B = x10.dot(v20.cross(v30)) + v10.dot(x20.cross(v30)) + v10.dot(v20.cross(x30));
     double C = x10.dot(x20.cross(v30)) + x10.dot(v20.cross(x30)) + v10.dot(x20.cross(x30));
     double D = x10.dot(x20.cross(x30));
-    Eigen::Vector3d E = x20.cross(x30);
-    Eigen::Vector3d F = x20.cross(v30) + v20.cross(x30);
-    Eigen::Vector3d G = v20.cross(v30);
+    Vector3d E = x20.cross(x30);
+    Vector3d F = x20.cross(v30) + v20.cross(x30);
+    Vector3d G = v20.cross(v30);
 
     double op[7];
     op[0] = A * A;
@@ -381,7 +380,7 @@ void CTCD::distancePoly3D(const Eigen::Vector3d &x10,
 
 
 // Dynamic collison : Checks for collison along path of goal and proxy
-bool findCollisions(Eigen::Vector3d& goal, Eigen::Vector3d& proxy, double toolRadius,
+bool findCollisions(Vector3d& goal, Vector3d& proxy, double toolRadius,
                        cXPBDDeformableMesh* model, std::vector<ColInfo*>& collisions)
 {
 
@@ -404,15 +403,15 @@ bool findCollisions(Eigen::Vector3d& goal, Eigen::Vector3d& proxy, double toolRa
 
     for (const auto& it : potentialCollisions) {
         // define collision info
-        Eigen::Vector3i face = f_.row(it.collidingTriangle2);
-        Eigen::Vector3d A0 = plast_.row(face(0));
-        Eigen::Vector3d B0 = plast_.row(face(1));
-        Eigen::Vector3d C0 = plast_.row(face(2));
-        Eigen::Vector3d N0 = Nlast_.row(it.collidingTriangle2);
-        Eigen::Vector3d A1 = p_.row(face(0));
-        Eigen::Vector3d B1 = p_.row(face(1));
-        Eigen::Vector3d C1 = p_.row(face(2));
-        Eigen::Vector3d N1 = N_.row(it.collidingTriangle2);
+        Vector3i face = f_.row(it.collidingTriangle2);
+        Vector3d A0 = plast_.row(face(0));
+        Vector3d B0 = plast_.row(face(1));
+        Vector3d C0 = plast_.row(face(2));
+        Vector3d N0 = Nlast_.row(it.collidingTriangle2);
+        Vector3d A1 = p_.row(face(0));
+        Vector3d B1 = p_.row(face(1));
+        Vector3d C1 = p_.row(face(2));
+        Vector3d N1 = N_.row(it.collidingTriangle2);
 
         // time of collision
         double t_;
@@ -441,12 +440,12 @@ bool findCollisions(Eigen::Vector3d& goal, Eigen::Vector3d& proxy, double toolRa
             collisions[idx]->triangle = face;
 
             // Triangle at collision
-            Eigen::Vector3d Ac = A0 + t_*(A1 - A0);
-            Eigen::Vector3d Bc = B0 + t_*(B1 - B0);
-            Eigen::Vector3d Cc = C0 + t_*(C1 - C0);
+            Vector3d Ac = A0 + t_*(A1 - A0);
+            Vector3d Bc = B0 + t_*(B1 - B0);
+            Vector3d Cc = C0 + t_*(C1 - C0);
 
             // proxy at collision
-            Eigen::Vector3d proxy_c = proxy + t_*(goal - proxy);
+            Vector3d proxy_c = proxy + t_*(goal - proxy);
 
             // Barycentric coordinates on collision
             double out[4];
@@ -467,7 +466,7 @@ bool findCollisions(Eigen::Vector3d& goal, Eigen::Vector3d& proxy, double toolRa
 }
 
 // Static collison : Just checks for collision with proxy
-bool findCollisions(Eigen::Vector3d& proxy, double toolRadius,
+bool findCollisions(Vector3d& proxy, double toolRadius,
                     cXPBDDeformableMesh* model, std::vector<ColInfo*>& collisions)
 {
 
@@ -491,15 +490,15 @@ bool findCollisions(Eigen::Vector3d& proxy, double toolRadius,
     for (const auto& it : potentialCollisions) {
 
         // define collision info
-        Eigen::Vector3i face = f_.row(it.collidingTriangle2);
-        Eigen::Vector3d A0 = vlast_.row(face(0));
-        Eigen::Vector3d B0 = vlast_.row(face(1));
-        Eigen::Vector3d C0  = vlast_.row(face(2));
-        Eigen::Vector3d N0 = Nlast_.row(it.collidingTriangle2);
-        Eigen::Vector3d A1 = v_.row(face(0));
-        Eigen::Vector3d B1 = v_.row(face(1));
-        Eigen::Vector3d C1 = v_.row(face(2));
-        Eigen::Vector3d N1 = N_.row(it.collidingTriangle2);
+        Vector3i face = f_.row(it.collidingTriangle2);
+        Vector3d A0 = vlast_.row(face(0));
+        Vector3d B0 = vlast_.row(face(1));
+        Vector3d C0  = vlast_.row(face(2));
+        Vector3d N0 = Nlast_.row(it.collidingTriangle2);
+        Vector3d A1 = v_.row(face(0));
+        Vector3d B1 = v_.row(face(1));
+        Vector3d C1 = v_.row(face(2));
+        Vector3d N1 = N_.row(it.collidingTriangle2);
 
         // time of collision
         double t_;
@@ -527,13 +526,13 @@ bool findCollisions(Eigen::Vector3d& proxy, double toolRadius,
             collisions[counter]->t = t_;
 
             // get the triangle on collision
-            Eigen::Vector3d Ac;
-            Eigen::Vector3d Bc;
-            Eigen::Vector3d Cc;
-            Eigen::Vector3d Nc;
+            Vector3d Ac;
+            Vector3d Bc;
+            Vector3d Cc;
+            Vector3d Nc;
 
             // get the proxy on collision
-            Eigen::Vector3d Pc;
+            Vector3d Pc;
 
             // save normals
             collisions[counter]->normal0 = N0;
@@ -585,7 +584,7 @@ bool findCollisions(Eigen::Vector3d& proxy, double toolRadius,
             else
             {
                 //std::cout << "COLLISION t > 1 " << std::endl;
-                Eigen::Vector3d cp;
+                Vector3d cp;
 
                 SolvePoint(A1,B1,C1,proxy,cp);
                 std::cout << cp.transpose() << std::endl;
@@ -603,34 +602,189 @@ bool findCollisions(Eigen::Vector3d& proxy, double toolRadius,
 
 }
 
-bool CTCD::vertexFaceCTCD(const Eigen::Vector3d& q0start,
-                          const Eigen::Vector3d& q1start,
-                          const Eigen::Vector3d& q2start,
-                          const Eigen::Vector3d& q3start,
-                          const Eigen::Vector3d& q0end,
-                          const Eigen::Vector3d& q1end,
-                          const Eigen::Vector3d& q2end,
-                          const Eigen::Vector3d& q3end,
+
+bool CTCD::edgeEdgeCTCD(const Vector3d &q0start,
+                        const Vector3d &p0start,
+                        const Vector3d &q1start,
+                        const Vector3d &p1start,
+                        const Vector3d &q0end,
+                        const Vector3d &p0end,
+                        const Vector3d &q1end,
+                        const Vector3d &p1end,
+                        double eta,
+                        double &t)
+{
+    double minD = eta * eta;
+
+    // time intervals during which v is colinear with the edge, on the side of e1 towards e2, and on the side of e2 towards e1
+    std::vector<TimeInterval> rawcoplane, a0, a1, b0, b1;
+
+    Vector3d x10 = p0start - p1start;
+    Vector3d x20 = p0start - q0start;
+    Vector3d x30 = p1start - q1start;
+
+    Vector3d vp0 = p0end-p0start;
+    Vector3d vp1 = p1end-p1start;
+    Vector3d vq0 = q0end-q0start;
+    Vector3d vq1 = q1end-q1start;
+
+    Vector3d v10 = vp0 - vp1;
+    Vector3d v20 = vp0 - vq0;
+    Vector3d v30 = vp1 - vq1;
+
+    distancePoly3D(x10, x20, x30, v10, v20, v30, minD, rawcoplane);
+
+    // check for parallel edges
+    std::vector<TimeInterval> coplane;
+    std::vector<TimeInterval> parallel;
+
+    for(size_t i=0; i<rawcoplane.size(); i++)
+    {
+        double midt = (rawcoplane[i].u + rawcoplane[i].l) / 2;
+        x10 = (q0start - p0start) + midt * (vq0 - vp0);
+        x20 = (q1start - p1start) + midt * (vq1 - vp1);
+
+        if (x10.cross(x20).norm() < 1e-8)
+        {
+            parallel.push_back(rawcoplane[i]);
+        }
+        else
+        {
+            coplane.push_back(rawcoplane[i]);
+        }
+    }
+
+    if(coplane.empty())
+        return false;
+
+    x10 = p1start - q1start;
+    v10 = vp1 - vq1;
+    x20 = p0start - q0start;
+    v20 = vp0 - vq0;
+    x30 = q0start - q1start;
+    v30 = vq0 - vq1;
+    barycentricPoly3D(x10, x20, x30, v10, v20, v30, a0);
+    if(a0.empty())
+        return false;
+
+    x20 = q0start - p0start;
+    v20 = vq0 - vp0;
+    x30 = p0start - q1start;
+    v30 = vp0 - vq1;
+    barycentricPoly3D(x10, x20, x30, v10, v20, v30, a1);
+    if(a1.empty())
+        return false;
+
+    x10 = p0start - q0start;
+    v10 = vp0 - vq0;
+    x20 = p1start - q1start;
+    v20 = vp1 - vq1;
+    x30 = q1start - q0start;
+    v30 = vq1 - vq0;
+    barycentricPoly3D(x10, x20, x30, v10, v20, v30, b0);
+    if(b0.empty())
+        return false;
+
+    //x10 = p0 - q0;
+    //v10 = vp0 - vq0;
+    x20 = q1start - p1start;
+    v20 = vq1 - vp1;
+    x30 = p1start - q0start;
+    v30 = vp1 - vq0;
+
+    barycentricPoly3D(x10, x20, x30, v10, v20, v30, b1);
+    if(b1.empty())
+        return false;
+
+    // check intervals for overlap
+    bool col = false;
+    double mint = 1.0;
+    for (int i = 0; i < (int) coplane.size(); i++)
+    {
+        for (int j = 0; j < (int) a0.size(); j++)
+        {
+            for (int k = 0; k < (int) a1.size(); k++)
+            {
+                for (int l = 0; l < (int) b0.size(); l++)
+                {
+                    for (int m = 0; m < (int) b1.size(); m++)
+                    {
+                        vector<TimeInterval> intervals;
+                        intervals.push_back(coplane[i]);
+                        intervals.push_back(a0[j]);
+                        intervals.push_back(a1[k]);
+                        intervals.push_back(b0[l]);
+                        intervals.push_back(b1[m]);
+                        if (TimeInterval::overlap(intervals) )
+                        {
+                            TimeInterval isect = TimeInterval::intersect(intervals);
+                            bool skip = false;
+                            for(int p = 0; p < (int)parallel.size(); p++)
+                            {
+                                vector<TimeInterval> pcheck;
+                                pcheck.push_back(isect);
+                                pcheck.push_back(parallel[p]);
+                                if(TimeInterval::overlap(pcheck) )
+                                {
+                                    skip = true;
+                                    break;
+                                }
+                            }
+                            if(!skip)
+                            {
+                                mint = min(mint, isect.l);
+                                col = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // handle parallel edges
+    for(int i=0; i< (int)parallel.size(); i++)
+    {
+
+    }
+
+
+    if(col)
+    {
+        t = mint;
+        return true;
+    }
+    return false;
+}
+
+bool CTCD::vertexFaceCTCD(const Vector3d& q0start,
+                          const Vector3d& q1start,
+                          const Vector3d& q2start,
+                          const Vector3d& q3start,
+                          const Vector3d& q0end,
+                          const Vector3d& q1end,
+                          const Vector3d& q2end,
+                          const Vector3d& q3end,
                           double eta,
                           double& t)
 {
     double mind = eta*eta;
 
-    Eigen::Vector3d v0 = q0end - q0start;
-    Eigen::Vector3d v1 = q1end - q1start;
-    Eigen::Vector3d v2 = q2end - q2start;
-    Eigen::Vector3d v3 = q3end - q3start;
+    Vector3d v0 = q0end - q0start;
+    Vector3d v1 = q1end - q1start;
+    Vector3d v2 = q2end - q2start;
+    Vector3d v3 = q3end - q3start;
 
     // time intervals during which v is colinear with the edge,
     // on the side of e1 towards e2, and on the side of e2 towards e1
     vector<TimeInterval> coplane, e1, e2, e3;
 
-    Eigen::Vector3d x10 = q0start - q1start;
-    Eigen::Vector3d v10 = v0 - v1;
-    Eigen::Vector3d x20 = (q3start - q1start).cross(q2start - q1start);
-    Eigen::Vector3d v20 = (v3 - v1).cross(v2 - v1);
-    Eigen::Vector3d x30 = q3start - q1start;
-    Eigen::Vector3d v30 = v3 - v1;
+    Vector3d x10 = q0start - q1start;
+    Vector3d v10 = v0 - v1;
+    Vector3d x20 = (q3start - q1start).cross(q2start - q1start);
+    Vector3d v20 = (v3 - v1).cross(v2 - v1);
+    Vector3d x30 = q3start - q1start;
+    Vector3d v30 = v3 - v1;
     planePoly3D(x10, x20, x30, v10, v20, v30, e1);
 
     if(e1.empty())
@@ -704,34 +858,34 @@ bool CTCD::vertexFaceCTCD(const Eigen::Vector3d& q0start,
     return false;
 }
 
-bool CTCD::vertexFaceCTCD(const Eigen::Vector3d& q0start,
-                          const Eigen::Vector3d& q1start,
-                          const Eigen::Vector3d& q2start,
-                          const Eigen::Vector3d& q3start,
-                          const Eigen::Vector3d& q1end,
-                          const Eigen::Vector3d& q2end,
-                          const Eigen::Vector3d& q3end,
+bool CTCD::vertexFaceCTCD(const Vector3d& q0start,
+                          const Vector3d& q1start,
+                          const Vector3d& q2start,
+                          const Vector3d& q3start,
+                          const Vector3d& q1end,
+                          const Vector3d& q2end,
+                          const Vector3d& q3end,
                           double eta,
                           double& t)
 {
 
     double mind = eta*eta;
 
-    Eigen::Vector3d v0 = q0start;
-    Eigen::Vector3d v1 = q1end - q1start;
-    Eigen::Vector3d v2 = q2end - q2start;
-    Eigen::Vector3d v3 = q3end - q3start;
+    Vector3d v0 = q0start;
+    Vector3d v1 = q1end - q1start;
+    Vector3d v2 = q2end - q2start;
+    Vector3d v3 = q3end - q3start;
 
     // time intervals during which v is colinear with the edge,
     // on the side of e1 towards e2, and on the side of e2 towards e1
     vector<TimeInterval> coplane, e1, e2, e3;
 
-    Eigen::Vector3d x10 = q0start - q1start;
-    Eigen::Vector3d v10 = v0 - v1;
-    Eigen::Vector3d x20 = (q3start - q1start).cross(q2start - q1start);
-    Eigen::Vector3d v20 = (v3 - v1).cross(v2 - v1);
-    Eigen::Vector3d x30 = q3start - q1start;
-    Eigen::Vector3d v30 = v3 - v1;
+    Vector3d x10 = q0start - q1start;
+    Vector3d v10 = v0 - v1;
+    Vector3d x20 = (q3start - q1start).cross(q2start - q1start);
+    Vector3d v20 = (v3 - v1).cross(v2 - v1);
+    Vector3d x30 = q3start - q1start;
+    Vector3d v30 = v3 - v1;
     planePoly3D(x10, x20, x30, v10, v20, v30, e1);
 
     if(e1.empty())
@@ -801,5 +955,188 @@ bool CTCD::vertexFaceCTCD(const Eigen::Vector3d& q0start,
         return true;
     }
 
+    return false;
+}
+
+bool CTCD::vertexEdgeCTCD(const Vector3d &q0start,
+                          const Vector3d &q1start,
+                          const Vector3d &q2start,
+                          const Vector3d &q0end,
+                          const Vector3d &q1end,
+                          const Vector3d &q2end,
+                          double eta,
+                          double &t)
+{
+    double op[5];
+    double minD = eta*eta;
+    Vector3d v0 = q0end-q0start;
+    Vector3d v1 = q1end-q1start;
+    Vector3d v2 = q2end-q2start;
+
+    // time intervals during which v is colinear with the edge, on the side of e1 towards e2, and on the side of e2 towards e1
+    vector<TimeInterval> colin, e1, e2;
+
+    Vector3d ab = q2start - q1start;
+    Vector3d ac = q0start - q1start;
+    Vector3d cb = q2start - q0start;
+    Vector3d vab = v2 - v1;
+    Vector3d vac = v0 - v1;
+    Vector3d vcb = v2 - v0;
+
+    double c = ab.dot(ac);
+    double b = ac.dot(vab) + ab.dot(vac);
+    double a = vab.dot(vac);
+    op[0] = a;
+    op[1] = b;
+    op[2] = c;
+    findIntervals(op, 2, e1, true);
+    if(e1.empty())
+        return false;
+
+    c = ab.dot(cb);
+    b = cb.dot(vab) + ab.dot(vcb);
+    a = vab.dot(vcb);
+
+    op[0] = a;
+    op[1] = b;
+    op[2] = c;
+    findIntervals(op, 2, e2, true);
+    if(e2.empty())
+        return false;
+
+    double A = ab.dot(ab);
+    double B = 2 * ab.dot(vab);
+    double C = vab.dot(vab);
+    double D = ac.dot(ac);
+    double E = 2 * ac.dot(vac);
+    double F = vac.dot(vac);
+    double G = ac.dot(ab);
+    double H = vab.dot(ac) + vac.dot(ab);
+    double I = vab.dot(vac);
+    op[4] = A * D - G * G - minD * A;
+    op[3] = B * D + A * E - 2 * G * H - minD * B;
+    op[2] = B * E + A * F + C * D - H * H - 2 * G * I - minD * C;
+    op[1] = B * F + C * E - 2 * H * I;
+    op[0] = C * F - I * I;
+    findIntervals(op, 4, colin, false);
+    if(colin.empty())
+        return false;
+
+    double mint = 1.0;
+    bool col = false;
+    for (int i = 0; i < (int) colin.size(); i++)
+    {
+        for (int j = 0; j < (int) e1.size(); j++)
+        {
+            for (int k = 0; k < (int) e2.size(); k++)
+            {
+                vector<TimeInterval> intervals;
+                intervals.push_back(colin[i]);
+                intervals.push_back(e1[j]);
+                intervals.push_back(e2[k]);
+                if(TimeInterval::overlap(intervals))
+                {
+                    mint = std::min(TimeInterval::intersect(intervals).l, mint);
+                    col = true;
+                }
+            }
+        }
+    }
+
+    if(col)
+    {
+        t = mint;
+        return true;
+    }
+    return false;
+}
+
+bool CTCD::vertexVertexCTCD(const Vector3d &q1start,
+                            const Vector3d &q2start,
+                            const Vector3d &q1end,
+                            const Vector3d &q2end,
+                            double eta, double &t)
+{
+    int roots = 0;
+    double min_d = eta*eta;
+    double t1 = 0, t2 = 0;
+    Vector3d v1 = q1end-q1start;
+    Vector3d v2 = q2end-q2start;
+
+    // t^2 term
+    double a = v1.dot(v1) + v2.dot(v2) - 2 * v1.dot(v2);
+    // t term
+    double b = 2 * (v1.dot(q1start) - v2.dot(q1start) - v1.dot(q2start) + v2.dot(q2start));
+    // current distance - min_d
+    double c = q1start.dot(q1start) + q2start.dot(q2start) - 2 * q1start.dot(q2start) - min_d;
+    if (a != 0)
+    {
+        roots = getQuadRoots(a, b, c, t1, t2);
+    }
+    else if (b != 0)
+    {
+        t1 = -c / b;
+        roots = 1;
+    }
+    else
+    {
+        if(c<=0)
+        {
+            t = 0;
+            return true;
+        }
+        return false;
+    }
+
+    double op[3];
+    op[0] = a;
+    op[1] = b;
+    op[2] = c;
+    vector<TimeInterval> interval;
+
+    if (roots == 2)
+    {
+        checkInterval(0, t1, op, 2, interval, false);
+        if(!interval.empty())
+        {
+            t = 0;
+            return true;
+        }
+        checkInterval(t1, t2, op, 2, interval, false);
+        if(!interval.empty())
+        {
+            t = t1;
+            return true;
+        }
+        checkInterval(t2, 1.0, op, 2, interval, false);
+        if(!interval.empty())
+        {
+            t = t2;
+            return true;
+        }
+        return false;
+    }
+    else if (roots == 1)
+    {
+        checkInterval(0, t1, op, 2, interval, false);
+        if(!interval.empty())
+        {
+            t = 0;
+            return true;
+        }
+        checkInterval(t1, 1.0, op, 2, interval, false);
+        if(!interval.empty())
+        {
+            t = t1;
+            return true;
+        }
+        return false;
+    }
+    checkInterval(0, 1.0, op, 2, interval, false);
+    if(!interval.empty())
+    {
+        t = 0;
+        return true;
+    }
     return false;
 }

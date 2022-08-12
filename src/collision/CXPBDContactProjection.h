@@ -1,8 +1,0 @@
-//
-// Created by agalvan-admin on 7/12/22.
-//
-
-#ifndef CXPBD_CXPBDCONTACTPROJECTION_H
-#define CXPBD_CXPBDCONTACTPROJECTION_H
-
-#endif //CXPBD_CXPBDCONTACTPROJECTION_H

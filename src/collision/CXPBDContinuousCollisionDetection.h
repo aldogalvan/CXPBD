@@ -5,9 +5,12 @@
 #include <Eigen/Dense>
 #include <vector>
 #include <set>
-#include "../world/CXPBDDeformableObject.h"
-#include "../world/CXPBDTool.h"
-#include "../world/CXPBDToolMesh.h"
+#include "world/CXPBDDeformableObject.h"
+#include "world/CXPBDTool.h"
+#include "world/CXPBDToolMesh.h"
+
+using namespace std;
+using namespace Eigen;
 
 #ifndef CXPBD_CXPBDCONTINUOUSCOLLISIONDETECTION_H
 #define CXPBD_CXPBDCONTINUOUSCOLLISIONDETECTION_H
@@ -28,7 +31,7 @@ struct ColInfo {
     double t;
 
     // Index of collided triangle
-    Eigen::Vector3i triangle;
+    Vector3i triangle;
 
     // Indices making up edge
     pair<int,int> edge;
@@ -37,19 +40,19 @@ struct ColInfo {
     int vertex;
 
     // Normal of triangle at t1
-    Eigen::Vector3d normal1;
+    Vector3d normal1;
 
     // Normal of triangle at t0
-    Eigen::Vector3d normal0;
+    Vector3d normal0;
 
     // Normal of triangle at tc
-    Eigen::Vector3d normalc;
+    Vector3d normalc;
 
     // Barycentric coordinates at collision
     double alpha , beta , gamma;
 
     // Normal vector
-    Eigen::Vector3d normal;
+    Vector3d normal;
 
 };
 
@@ -75,37 +78,77 @@ struct TimeInterval
 };
 
 // dynamics collision finder
-bool findCollisions(Eigen::Vector3d& goal, Eigen::Vector3d& proxy, double toolRadius,
+bool findCollisions(Vector3d& goal, Vector3d& proxy, double toolRadius,
                        cXPBDDeformableMesh* model, std::vector<ColInfo*>& collisions);
 
 // static collision finder
-bool findCollisions(Eigen::Vector3d& proxy, double toolRadius,
+bool findCollisions(Vector3d& proxy, double toolRadius,
                     cXPBDDeformableMesh* model, std::vector<ColInfo*>& collisions);
 
 class CTCD {
 
 public:
 
-static bool vertexFaceCTCD(const Eigen::Vector3d& q0start,
-                           const Eigen::Vector3d& q1start,
-                           const Eigen::Vector3d& q2start,
-                           const Eigen::Vector3d& q3start,
-                           const Eigen::Vector3d& q0end,
-                           const Eigen::Vector3d& q1end,
-                           const Eigen::Vector3d& q2end,
-                           const Eigen::Vector3d& q3end,
+// Looks for collisions between edges (q0start, p0start) and (q1start, p1start) as they move towards
+// (q0end, p0end) and (q1end, p1end). Returns true if the edges ever come closer than a distance eta to each
+// other, and stores the earliest time (in the interval [0,1]) at which they do so in t.
+// WARNING: Does not work correctly if two edges are parallel at the time of intersection -- vertexEdgeCTCD
+// should catch this case, though.
+static bool edgeEdgeCTCD(const Vector3d &q0start,
+                         const Vector3d &p0start,
+                         const Vector3d &q1start,
+                         const Vector3d &p1start,
+                         const Vector3d &q0end,
+                         const Vector3d &p0end,
+                         const Vector3d &q1end,
+                         const Vector3d &p1end, double eta,
+                         double &t);
+
+// Looks for collisions between the vertex q0start and the face (q1start, q2start, q3start) as they move
+// towards q0end and (q1end, q2end, q3end). Returns true if the vertex and face ever come closer than a distance
+// eta to each, and stores the earliest time (in the interval [0,1]) at which they do so in t.
+static bool vertexFaceCTCD(const Vector3d& q0start,
+                           const Vector3d& q1start,
+                           const Vector3d& q2start,
+                           const Vector3d& q3start,
+                           const Vector3d& q0end,
+                           const Vector3d& q1end,
+                           const Vector3d& q2end,
+                           const Vector3d& q3end,
                            double eta,
                            double& t);
 
-static bool vertexFaceCTCD(const Eigen::Vector3d& q0start,
-                              const Eigen::Vector3d& q1start,
-                              const Eigen::Vector3d& q2start,
-                              const Eigen::Vector3d& q3start,
-                              const Eigen::Vector3d& q1end,
-                              const Eigen::Vector3d& q2end,
-                              const Eigen::Vector3d& q3end,
+static bool vertexFaceCTCD(const Vector3d& q0start,
+                              const Vector3d& q1start,
+                              const Vector3d& q2start,
+                              const Vector3d& q3start,
+                              const Vector3d& q1end,
+                              const Vector3d& q2end,
+                              const Vector3d& q3end,
                               double eta,
                               double& t);
+
+// Looks for the degenerate case of collisions between the vertex q0start and the edge (q1start, s2start) as they
+// move towards q0end and (q1end, q2end). Returns true if the vertex and edge ever come closer than a distance
+// eta to each other, and stores the earliest time (in the interval [0,1]) at which they do so in t.
+static bool vertexEdgeCTCD(const Vector3d &q0start,
+                           const Vector3d &q1start,
+                           const Vector3d &q2start,
+                           const Vector3d &q0end,
+                           const Vector3d &q1end,
+                           const Vector3d &q2end,
+                           double eta,
+                           double &t);
+
+// Looks for the degenerate case of collisions between the vertices q1start and q2start, as they move towards
+// q1end and q2end. Returns true if the vertices ever come closer than a distane of eta to each other, and stores
+// the earliest time (in the interval [0,1]) at which they do so in t.
+static bool vertexVertexCTCD(const Vector3d &q1start,
+                             const Vector3d &q2start,
+                             const Vector3d &q1end,
+                             const Vector3d &q2end,
+                             double eta, double &t);
+
 
 
 private:
@@ -128,29 +171,29 @@ private:
     // (given in "natural," descending order of power of x) is positive (when pos = true) or negative (if pos = false).
     static void findIntervals(double *op, int n, std::vector<TimeInterval> & intervals, bool pos);
 
-    static void distancePoly3D(const Eigen::Vector3d &x10,
-                               const Eigen::Vector3d &x20,
-                               const Eigen::Vector3d &x30,
-                               const Eigen::Vector3d &v10,
-                               const Eigen::Vector3d &v20,
-                               const Eigen::Vector3d &v30,
+    static void distancePoly3D(const Vector3d &x10,
+                               const Vector3d &x20,
+                               const Vector3d &x30,
+                               const Vector3d &v10,
+                               const Vector3d &v20,
+                               const Vector3d &v30,
                                double minDSquared,
                                std::vector<TimeInterval> &result);
 
-    static void barycentricPoly3D(const Eigen::Vector3d &x10,
-                                  const Eigen::Vector3d &x20,
-                                  const Eigen::Vector3d &x30,
-                                  const Eigen::Vector3d &v10,
-                                  const Eigen::Vector3d &v20,
-                                  const Eigen::Vector3d &v30,
+    static void barycentricPoly3D(const Vector3d &x10,
+                                  const Vector3d &x20,
+                                  const Vector3d &x30,
+                                  const Vector3d &v10,
+                                  const Vector3d &v20,
+                                  const Vector3d &v30,
                                   std::vector<TimeInterval> &result);
 
-    static void planePoly3D(const Eigen::Vector3d &x10,
-                            const Eigen::Vector3d &x20,
-                            const Eigen::Vector3d &x30,
-                            const Eigen::Vector3d &v10,
-                            const Eigen::Vector3d &v20,
-                            const Eigen::Vector3d &v30,
+    static void planePoly3D(const Vector3d &x10,
+                            const Vector3d &x20,
+                            const Vector3d &x30,
+                            const Vector3d &v10,
+                            const Vector3d &v20,
+                            const Vector3d &v30,
                             std::vector<TimeInterval> &result);
 
 };

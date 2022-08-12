@@ -37,7 +37,7 @@ INCLUDE_DIRECTORIES (
 file (GLOB_RECURSE CXPBD_SOURCES src/*.cpp src/*.h)
 
 # static library
-add_library (CXPBD STATIC ${CXPBD_SOURCES} src/collision/CXPBDContactConstraint.cpp src/collision/CXPBDContactConstraint.h src/collision/CXPBDContactProjection.cpp src/collision/CXPBDContactProjection.h src/collision/CXPBDProxyAlgorithm.cpp src/collision/CXPBDProxyAlgorithm.h src/collision/CXPBDEdgeCollisionDetection.cpp src/collision/CXPBDEdgeCollisionDetection.h)
+add_library (CXPBD STATIC ${CXPBD_SOURCES} src/collision/CXPBDEdgeCollisionDetection.cpp src/collision/CXPBDEdgeCollisionDetection.h src/tools/CXPBDThread.cpp src/tools/CXPBDThread.h src/constraints/CXPBDThreadBendingConstraint.cpp src/constraints/CXPBDThreadBendingConstraint.h src/constraints/CXPBDStVenantKirchoffConstraint.cpp src/constraints/CXPBDStVenantKirchoffConstraint.h src/constraints/CXPBDDynamicFixedPointConstraint.cpp src/constraints/CXPBDDynamicFixedPointConstraint.h src/tools/CXPBDSutureNeedle.cpp src/tools/CXPBDSutureNeedle.h)
 
 # use cuda
 if (CXPBD_USE_CUDA)

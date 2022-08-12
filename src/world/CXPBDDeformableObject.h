@@ -3,6 +3,7 @@
 //
 
 #include "chai3d.h"
+#include <Eigen/Dense>
 #include "../constraints/CXPBDConstraint.h"
 #include "../collision/CXPBDAABB.h"
 #include <set>
