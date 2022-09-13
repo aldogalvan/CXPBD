@@ -9,7 +9,6 @@
 #include "world/CXPBDToolMesh.h"
 #include "world/CXPBDTool.h"
 #include "collision/CXPBDContinuousCollisionDetection.h"
-#include "tools/CXPBDThread.h"
 #include "tetgen.h"
 #include <Eigen/Core>
 #include <set>
@@ -77,11 +76,7 @@ cPositionalLight* light2;
 // a colored background
 cBackground* background;
 
-// the thread
-cXPBDThread* thread_;
-
-// the position of the suture
-shared_ptr<Eigen::Vector3d> suture_pos(new Eigen::Vector3d(0,0,0));
+cXPBDDeformableMesh* xpbd_mesh;
 
 // a font for rendering text
 cFontPtr font;
@@ -113,9 +108,6 @@ cThread* hapticsThread;
 // Graphics thread
 cThread* graphicsThread;
 
-// thread length, segments, and radius
-double length = 1; int segments = 20; double radius = 0.001;
-
 // a handle to window display context
 GLFWwindow* window = NULL;
 
@@ -145,6 +137,12 @@ cShapeLine* tool;
 
 // the length of the tool used for visualizetion
 double toolLength = 0.1;
+
+// this is the proxy stiffness
+double proxy_stiffness = 500;
+
+// the external force applied to the object based on collision
+Eigen::MatrixXd externalForce;
 
 // force
 cVector3d force(0,0,0);
@@ -214,6 +212,14 @@ int main(int argc, char* argv[])
 
     cout << endl;
     cout << "-----------------------------------" << endl;
+    cout << "CHAI3D" << endl;
+    cout << "Demo: 13-primitives" << endl;
+    cout << "Copyright 2003-2016" << endl;
+    cout << "-----------------------------------" << endl << endl << endl;
+    cout << "Keyboard Options:" << endl << endl;
+    cout << "[s] - Save copy of shadowmap to file" << endl;
+    cout << "[f] - Enable/Disable full screen mode" << endl;
+    cout << "[m] - Enable/Disable vertical mirroring" << endl;
     cout << "[q] - Exit application" << endl;
     cout << endl << endl;
 
@@ -370,11 +376,31 @@ int main(int argc, char* argv[])
     // retrieve information about the current haptic device
     cHapticDeviceInfo info = hapticDevice->getSpecifications();
 
-
     //--------------------------------------------------------------------------
     // CREATE XPBD OBJECT
     //--------------------------------------------------------------------------
 
+    // creates the deformable objects
+    xpbd_mesh = new cXPBDDeformableMesh();
+    world->addChild(xpbd_mesh);
+    createTetrahedralMesh();
+    xpbd_mesh->setLocalPos(Eigen::Vector3d(0,0,-0.5));
+    xpbd_mesh->scaleObject(0.2);
+    xpbd_mesh->connectToChai3d();
+    Eigen::MatrixXd vel(xpbd_mesh->numVerts(),3);
+    vel.setZero();
+    xpbd_mesh->setVelocities(vel);
+
+    // apply edge length constraint
+    xpbd_mesh->constrain_edge_lengths(0.05,0.00);
+
+    // apply tetrahedron volume constraint
+    xpbd_mesh->constrain_tetrahedron_volumes(0.0,0.00);
+
+    //xpbd_mesh->constrain_neohookean_elasticity_potential(100,1);
+
+    // wireframe vis
+    xpbd_mesh->setWireMode(true,true);
 
     // define the radius of the tool (sphere)
     toolRadius = 0.01;
@@ -382,25 +408,36 @@ int main(int argc, char* argv[])
     // add the line to the world
     world->addChild(tool);
 
-    //--------------------------------------------------------------------------
-    // CREATE THREAD
-    //--------------------------------------------------------------------------
+    // set last positions
+    xpbd_mesh->setVerticesLast();
 
-    thread_ = new cXPBDThread(segments,length,radius);
-    world->addChild(thread_);
-    thread_->constrain_edge_lengths(0.05,0.05);
-    thread_->constrain_edge_bending(0.50,0.05);
-    suture_pos->setZero();
-    thread_->setSuturePos(suture_pos);
-    thread_->constrain_dynamic_point();
-    thread_->connectToChai3d();
-    thread_->setWireMode(true);
-    thread_->setEdgeLineWidth(0.01);
-    thread_->setShowEdges(true);
-    thread_->m_edgeLineColor = cColorf(1,0,0);
-    thread_->setUseVertexColors(true);
-    thread_->setVertexColor(chai3d::cColorf(0,0,1));
+    //finds the indices at the bottom
+    auto pos = xpbd_mesh->positions();
 
+    vector<int> indices;
+
+    for (int i = 0; i < xpbd_mesh->numVerts() ; i++)
+    {
+        double height = pos(i,2);
+
+        if (height < -.149)
+            indices.emplace_back(i);
+    }
+
+    // Sets indices as fixed
+    xpbd_mesh->constrain_nodes_positions(indices);
+
+    // builds a boundary box
+    xpbd_mesh->buildAABBBoundaryBox();
+
+    // computes normals
+    xpbd_mesh->computeNormals();
+
+    // resize the external force vector
+    externalForce.resize(xpbd_mesh->numVerts(),3);
+
+    // set the external force vector equal to zero
+    externalForce.setZero();
 
     //--------------------------------------------------------------------------
     // WIDGETS
@@ -447,6 +484,7 @@ int main(int argc, char* argv[])
     // main graphic loop
     while (!glfwWindowShouldClose(window))
     {
+
         // process events
         updateGraphics();
 
@@ -458,6 +496,7 @@ int main(int argc, char* argv[])
 
         // signal frequency counter
         freqCounterGraphics.signal(1);
+
 
     }
 
@@ -669,9 +708,6 @@ enum cMode
 void updateHaptics(void)
 {
 
-    cPrecisionClock clock;
-    clock.start(true);
-
     // simulation in now running
     simulationRunning  = true;
     simulationFinished = false;
@@ -687,7 +723,6 @@ void updateHaptics(void)
 
     // get initial position
     hapticDevice->getPosition(pos);
-    *suture_pos = pos.eigen();
 
     // get the rotation
     hapticDevice->getRotation(theta);
@@ -700,9 +735,9 @@ void updateHaptics(void)
     tool->m_colorPointA.setWhite();
     tool->m_colorPointB.setWhite();
 
-    // stiffness constant
-    double k = 500;
-    double b = 1;
+    // stiffess constant
+    double k = 750;
+    double b = 0;
 
     // friction coefficient
     double us = 0.1;
@@ -711,19 +746,13 @@ void updateHaptics(void)
     // initial step
     double dt = 0.001;
 
-    Eigen::MatrixXd externalForce(thread_->numVerts(),3);
-    externalForce.setZero();
-
-
     // main haptic simulation loop
     while(simulationRunning) {
+
 
         /////////////////////////////////////////////////////////////////////
         // HAPTIC FORCE COMPUTATION
         /////////////////////////////////////////////////////////////////////
-
-        dt = clock.getCurrentTimeSeconds();
-        clock.reset();
 
         // sets the force equal zero
         force = cVector3d(0,0,0);
@@ -731,7 +760,6 @@ void updateHaptics(void)
 
         // gets the position
         hapticDevice->getPosition(pos);
-        *suture_pos = pos.eigen();
 
         // gets the velocity
         hapticDevice->getLinearVelocity(vel);
@@ -744,17 +772,38 @@ void updateHaptics(void)
         // change to eigen
         Eigen::Vector3d posEigen = pos.eigen(); Eigen::Vector3d proxyEigen = proxy.eigen();
 
+        // collision info structure
+        std::vector<ColInfo*> collisions;
+
+        // computes the proxy
+        if (findCollisions(posEigen, proxyEigen, toolRadius, xpbd_mesh, collisions))
+        {
+            for (int i = 0u; i  < collisions.size() ; i++)
+            {
+                Eigen::Vector3i idx = collisions[i]->triangle;
+                Eigen::Vector3d force_eigen = k*(proxyEigen - posEigen) - b*vel.eigen();
+                externalForce.row(idx(0)) += -force_eigen / 3;
+                externalForce.row(idx(1)) += -force_eigen / 3;
+                externalForce.row(idx(2)) += -force_eigen / 3;
+                force = force_eigen;
+                torque = cCross(-toolLength*cMul(theta,cVector3d(0,0,1)), force);
+            }
+        }
+        else
+        {
+            proxy = pos;
+        }
+
+
         // update the dynamics
         updateDynamics(externalForce, dt,1,true);
 
         // sets the force equal zero
         hapticDevice->setForceAndTorqueAndGripperForce(force,cVector3d(0,0,0),0);
 
-        auto p = thread_->positions();
-
         // draw the tool
-        tool->m_pointA = cVector3d(pos);
-        tool->m_pointB = cVector3d(pos) + toolLength*cMul(theta,cVector3d(0,0,1));
+        tool->m_pointA = cVector3d(proxyEigen);
+        tool->m_pointB = cVector3d(proxyEigen) + toolLength*cMul(theta,cVector3d(0,0,1));
 
         // signal frequency counter
         freqCounterHaptics.signal(1);
@@ -764,66 +813,255 @@ void updateHaptics(void)
     simulationFinished = true;
 }
 
+// -----------------------------------------------------------------------------
+
+void createTetrahedralMesh(void)
+{
+
+    tetgenio input;
+
+    // TetGen switches
+    char TETGEN_SWITCHES[] = "pq1.414a0.002";
+
+    if (input.load_off(RESOURCE_PATH("../../resources/palpation/cylinder.off")))
+    {
+        // use TetGen to tetrahedralize our mesh
+        tetgenio output;
+        tetrahedralize(TETGEN_SWITCHES, &input, &output);
+
+        Eigen::MatrixXd points(output.numberofpoints,3);
+
+        // create a vertex in the object for each point of the result
+        for (int p = 0, pi = 0; p < output.numberofpoints; ++p, pi += 3)
+        {
+            cVector3d point;
+            point.x(output.pointlist[pi + 0]);
+            point.y(output.pointlist[pi + 1]);
+            point.z(output.pointlist[pi + 2]);
+
+            points.row(p) = Eigen::RowVector3d(output.pointlist[pi + 0],
+                                               output.pointlist[pi + 1],
+                                               output.pointlist[pi + 2]);
+        }
+
+        // sets the vertices of the mesh
+        xpbd_mesh->setVertices(points);
+
+        Eigen::MatrixXi faces(output.numberoftrifaces,3);
+
+        cout << output.numberoftrifaces << endl;
+
+        auto adjtet = output.adjtetlist;
+
+        // create a triangle for each face on the surface
+        for (int t = 0, ti = 0; t < output.numberoftrifaces; ++t, ti += 3)
+        {
+            cVector3d p[3];
+            unsigned int vi[3];
+
+            for (int i = 0; i < 3; ++i)
+            {
+                int tc = output.trifacelist[ti + i];
+                vi[i] = tc;
+                int pi = tc * 3;
+                p[i].x(output.pointlist[pi + 0]);
+                p[i].y(output.pointlist[pi + 1]);
+                p[i].z(output.pointlist[pi + 2]);
+            }
+            //unsigned int index = a_object->newTriangle(p[1], p[0], p[2]);
+            //a_chai3dMesh->newTriangle(vi[0], vi[1], vi[2]);
+            faces.row(t) = Eigen::RowVector3i(vi[0],vi[1],vi[2]);
+        }
+
+        // sets the faces of the mesh
+        xpbd_mesh->setFaces(faces);
+
+        // find out exactly which vertices are on the inside and outside
+        set<int> inside, outside;
+        for (int t = 0; t < output.numberoftrifaces * 3; ++t)
+        {
+            outside.insert(output.trifacelist[t]);
+        }
+        for (int p = 0; p < output.numberofpoints; ++p)
+        {
+            if (outside.find(p) == outside.end())
+                inside.insert(p);
+        }
+
+        xpbd_mesh->setInsideOutside(inside,outside);
+
+        Eigen::MatrixXi tetrahedra(output.numberoftetrahedra,4);
+        Eigen::MatrixXd tetrahedra_centroids(output.numberoftetrahedra,3);
+
+        for (int t = 0, ti = 0; t < output.numberoftetrahedra; ++t, ti += 4)
+        {
+
+            int v0 = output.tetrahedronlist[ti + 0];
+            int v1 = output.tetrahedronlist[ti + 1];
+            int v2 = output.tetrahedronlist[ti + 2];
+            int v3 = output.tetrahedronlist[ti + 3];
+
+            Eigen::RowVector4i tetrahedron;
+            tetrahedron[0] = v0;
+            tetrahedron[1] = v1;
+            tetrahedron[2] = v2;
+            tetrahedron[3] = v3;
+
+            // compute the centroids
+            Eigen::Vector3d p0 = points.row(v0);
+            Eigen::Vector3d p1 = points.row(v1);
+            Eigen::Vector3d p2 = points.row(v2);
+            Eigen::Vector3d p3 = points.row(v3);
+
+            tetrahedra_centroids.row(t) = (p0 + p1 + p2 + p3)/4;
+
+            tetrahedra.row(t) = (tetrahedron);
+
+        }
+
+        // compute the neighbors for each tetrahedron (share faces)
+        vector<set<int>> tetrahedra_neighbors[output.numberoftetrahedra];
+
+        for (int i = 0; i < output.numberoftetrahedra; i++)
+        {
+            set<int> temp;
+            temp.insert(tetrahedra(i,0));
+            temp.insert(tetrahedra(i,1));
+            temp.insert(tetrahedra(i,2));
+            temp.insert(tetrahedra(i,3));
+
+            for (int j = 0; j < output.numberoftetrahedra; j++)
+            {
+                if (i != j)
+                {
+                    temp.insert(tetrahedra(i,0));
+                    temp.insert(tetrahedra(i,1));
+                    temp.insert(tetrahedra(i,2));
+                    temp.insert(tetrahedra(i,3));
+
+                    if (temp.size() == 5)
+                    {
+                        tetrahedra_neighbors->at(i).insert(j);
+                    }
+                }
+            }
+
+        }
+
+        xpbd_mesh->setTetrahedra(tetrahedra);
+
+        Eigen::VectorXi facemap(faces.rows());
+        for (int i = 0; i < faces.rows() ; i++)
+        {
+            Eigen::RowVector3i face = faces.row(i);
+            std::set<int> faceset {face(0),face(1),face(2)};
+            for (int j = 0 ; j < tetrahedra.rows() ; j++)
+            {
+                Eigen::RowVector4i tet = tetrahedra.row(j);
+                std::set<int> tetset {tet(0),tet(1),tet(2),tet(3)};
+
+                if(std::includes(tetset.begin(), tetset.end(),faceset.begin(),faceset.end()))
+                {
+                    facemap(i) = j;
+                }
+            }
+        }
+
+        xpbd_mesh->setfacemap(facemap);
+
+        // get all the edges of our tetrahedra
+        set<pair<int, int>> springs;
+
+        for (int t = 0, ti = 0; t < output.numberoftetrahedra; ++t, ti += 4)
+        {
+            // store each edge of the tetrahedron as a pair of indices
+            for (int i = 0; i < 4; ++i) {
+                int v0 = output.tetrahedronlist[ti + i];
+                for (int j = i + 1; j < 4; ++j)
+                {
+                    int v1 = output.tetrahedronlist[ti + j];
+                    springs.insert(pair<int, int>(min(v0, v1), max(v0, v1)));
+                }
+            }
+        }
+
+        Eigen::MatrixXi edges(springs.size(),2);
+
+        int i = 0;
+
+        for (auto sp : springs)
+        {
+            edges.row(i) = Eigen::RowVector2i(sp.first, sp.second);
+            i++;
+        }
+        xpbd_mesh->setEdges(edges);
+    }
+
+    Eigen::VectorXd mass;
+    mass.setOnes(xpbd_mesh->numVerts());
+    mass *= .001;
+    xpbd_mesh->setMass(mass);
+
+}
 
 void updateDynamics(Eigen::MatrixXd& fext, double& dt, std::uint32_t iterations,
                     bool gravityEnabled)
 {
 
     // all object constraints
-    auto const& constraints_thread = thread_->constraints();
+    auto const& constraints   = xpbd_mesh->constraints();
 
     // number of constraints
-    auto const J_thread = constraints_thread.size();
+    auto const J = constraints.size();
 
     // vector of lagrange multipliers
-    std::vector<double> lagrange_multipliers_thread(J_thread, 0.);
+    std::vector<double> lagrange_multipliers(J, 0.);
 
     // gets the object velocity and positions
-    auto& v_thread = thread_->velocity();
-    auto& x_thread = thread_->positions();
+    auto& v = xpbd_mesh->velocity();
+    auto& x = xpbd_mesh->positions();
 
     // get the mass and acceleration
-    auto const& m_thread = thread_->mass();
-    Eigen::MatrixX3d a_thread = fext.array().colwise() / m_thread.array();
-
+    auto const& m = xpbd_mesh->mass();
+    Eigen::MatrixX3d a = fext.array().colwise() / m.array();
     if (gravityEnabled)
-    {
-        a_thread.rowwise() -= Eigen::RowVector3d(0,0,9.81);
-    }
+        a.rowwise() -= Eigen::RowVector3d(0,0,9.81);
 
     // set the force as zero
     fext.setZero();
 
     // explicit euler step
-    auto vexplicit_thread =  v_thread + dt * a_thread;
-    Eigen::MatrixXd p_thread = x_thread + dt * vexplicit_thread;
-
+    auto vexplicit =  v + dt * a;
+    Eigen::MatrixXd p = x + dt * vexplicit;
 
     // sequential gauss seidel type solve
-    std::fill(lagrange_multipliers_thread.begin(), lagrange_multipliers_thread.end(), 0.0);
+    std::fill(lagrange_multipliers.begin(), lagrange_multipliers.end(), 0.0);
     Eigen::Vector3d F(0,0,0);
-
 
     for (auto n = 0u; n < iterations; ++n)
     {
-        for (auto j_thread = 0u; j_thread < J_thread; ++j_thread)
+        for (auto j = 0u; j < J; ++j)
         {
-            auto const& constraint_thread = constraints_thread[j_thread];
-            constraint_thread->project(p_thread, x_thread, m_thread, lagrange_multipliers_thread[j_thread], dt,F);
+            auto const& constraint = constraints[j];
+            constraint->project(p, x, m, lagrange_multipliers[j], dt,F);
         }
     }
 
     // set the last positions
-    thread_->setVerticesLast();
+    xpbd_mesh->setVerticesLast();
 
     // update solution
-    for (auto i = 0u; i < x_thread.rows(); ++i)
+    for (auto i = 0u; i < x.rows(); ++i)
     {
-        v_thread.row(i) = (p_thread.row(i) - x_thread.row(i)) / dt;
-        x_thread.row(i) = p_thread.row(i);
+        v.row(i) = (p.row(i) - x.row(i)) / dt;
+        x.row(i) = p.row(i);
     }
 
-    thread_->updateChai3d();
+    // compute a new boundary box
+    xpbd_mesh->buildAABBBoundaryBox(p);
 
+    // computes new normals
+    xpbd_mesh->computeNormals(p);
+
+    xpbd_mesh->updateChai3d();
 }
-//-----------------

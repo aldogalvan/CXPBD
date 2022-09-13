@@ -392,10 +392,12 @@ int main(int argc, char* argv[])
     xpbd_mesh->setVelocities(vel);
 
     // apply edge length constraint
-    xpbd_mesh->constrain_edge_lengths(0.1,0.00);
+    xpbd_mesh->constrain_edge_lengths(0.05,0.00);
 
     // apply tetrahedron volume constraint
-    xpbd_mesh->constrain_tetrahedron_volumes(0.00,0.00);
+    xpbd_mesh->constrain_tetrahedron_volumes(0.0,0.00);
+
+    //xpbd_mesh->constrain_neohookean_elasticity_potential(100,1);
 
     // wireframe vis
     xpbd_mesh->setWireMode(true,true);
@@ -734,8 +736,8 @@ void updateHaptics(void)
     tool->m_colorPointB.setWhite();
 
     // stiffess constant
-    double k = 250;
-    double b = 1;
+    double k = 1000;
+    double b = 10;
 
     // friction coefficient
     double us = 0.1;
@@ -794,7 +796,11 @@ void updateHaptics(void)
 
 
         // update the dynamics
+        cPrecisionClock timer;
+        timer.start(true);
         updateDynamics(externalForce, dt,1,true);
+        double l = timer.getCurrentTimeSeconds();
+        //std::cout << l << std::endl;
 
         // sets the force equal zero
         hapticDevice->setForceAndTorqueAndGripperForce(force,cVector3d(0,0,0),0);
@@ -989,12 +995,6 @@ void updateDynamics(Eigen::MatrixXd& fext, double& dt, std::uint32_t iterations,
         auto vexplicit =  v + dt * a;
         Eigen::MatrixXd p = x + dt * vexplicit;
 
-        // compute a new boundary box
-        xpbd_mesh->buildAABBBoundaryBox(p);
-
-        // computes new normals
-        xpbd_mesh->computeNormals(p);
-
         // sequential gauss seidel type solve
         std::fill(lagrange_multipliers.begin(), lagrange_multipliers.end(), 0.0);
         Eigen::Vector3d F(0,0,0);
@@ -1016,8 +1016,13 @@ void updateDynamics(Eigen::MatrixXd& fext, double& dt, std::uint32_t iterations,
         {
                 v.row(i) = (p.row(i) - x.row(i)) / dt;
                 x.row(i) = p.row(i);
-
         }
+
+        // compute a new boundary box
+        xpbd_mesh->buildAABBBoundaryBox(p);
+
+        // computes new normals
+        xpbd_mesh->computeNormals(p);
 
         xpbd_mesh->updateChai3d();
 }

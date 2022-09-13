@@ -57,7 +57,6 @@ cXPBDIsometricBendingConstraint::project(positions_type& V, positions_type& V0, 
         grad_C.row(i) = sum;
     }
 
-
     // Skip if the gradient is sufficiently small
     constexpr double very_small_value = 1e-12;
     if (grad_C.norm() < very_small_value)
@@ -77,13 +76,12 @@ cXPBDIsometricBendingConstraint::project(positions_type& V, positions_type& V0, 
     double w2 = 1/(M(indices()[2]));
     double w3 = 1/(M(indices()[3]));
 
-    const double weighted_sum_of_gradients = (w0 + w1 + w2 + w3 )*grad_C.squaredNorm();
+    const double weighted_sum_of_gradients = (w0 + w1 + w2 + w3)*grad_C.squaredNorm();
 
     // Calculate \Delta lagrange multiplier
     const double delta_lagrange =
             (-C - alpha_tilde * lagrange) /
             (weighted_sum_of_gradients + alpha_tilde);
-
 
     // Update the lagrange multiplier
     lagrange += delta_lagrange;

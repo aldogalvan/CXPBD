@@ -244,6 +244,9 @@ void cXPBDDeformableMesh::computeNormals(void)
     // compute the normals
     igl::per_face_normals(p_,F_,N_);
 
+    // flip
+    N_ = -N_;
+
     // sets the last value for the normals
     Nlast_ = N_;
 

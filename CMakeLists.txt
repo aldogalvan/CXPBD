@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
-set(CMAKE_CUDA_STANDARD 14)
 
 project(CXPBD CXX CUDA)
 
@@ -24,8 +23,6 @@ INCLUDE_DIRECTORIES (
         ${CHAI3D_INCLUDE_DIRS}
 )
 
-#
-
 INCLUDE_DIRECTORIES (
         src
         src/world
@@ -34,10 +31,10 @@ INCLUDE_DIRECTORIES (
 )
 
 # static library source files
-file (GLOB_RECURSE CXPBD_SOURCES src/*.cpp src/*.h)
+file (GLOB_RECURSE CXPBD_SOURCES src/*.cpp src/*.h src/*.cu src/*.cuh)
 
 # static library
-add_library (CXPBD STATIC ${CXPBD_SOURCES} src/collision/CXPBDEdgeCollisionDetection.cpp src/collision/CXPBDEdgeCollisionDetection.h src/tools/CXPBDThread.cpp src/tools/CXPBDThread.h src/constraints/CXPBDThreadBendingConstraint.cpp src/constraints/CXPBDThreadBendingConstraint.h src/constraints/CXPBDStVenantKirchoffConstraint.cpp src/constraints/CXPBDStVenantKirchoffConstraint.h src/constraints/CXPBDDynamicFixedPointConstraint.cpp src/constraints/CXPBDDynamicFixedPointConstraint.h src/tools/CXPBDSutureNeedle.cpp src/tools/CXPBDSutureNeedle.h)
+add_library (CXPBD STATIC ${CXPBD_SOURCES} )
 
 # use cuda
 if (CXPBD_USE_CUDA)

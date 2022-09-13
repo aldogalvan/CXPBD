@@ -60,7 +60,26 @@ void cXPBDThread::constrain_dynamic_point(const cXPBDThread::scalar_type complia
 void cXPBDThread::constrain_edge_bending(const cXPBDThread::scalar_type compliance,
                                          const cXPBDThread::scalar_type damping)
 {
+    auto const& positions = this->p0();
+    auto const& E  = this->edges();
 
+
+    for (auto i = 0u; i < E.rows(); ++i)
+    {
+        auto const edge = H_.row(i);
+        auto const e0   = edge(0);
+        auto const e1   = edge(2);
+
+        auto constraint = std::make_unique<cXPBDEdgeConstraint>(
+                std::initializer_list<std::uint32_t>{
+                        static_cast<std::uint32_t>(e0),
+                        static_cast<std::uint32_t>(e1)},
+                positions,
+                compliance,
+                damping);
+
+        this->constraints().push_back(std::move(constraint));
+    }
 }
 
 void cXPBDThread::constrain_edge_lengths(const cXPBDThread::scalar_type compliance,

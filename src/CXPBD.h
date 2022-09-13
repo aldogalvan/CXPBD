@@ -15,7 +15,6 @@
 #include "constraints/CXPBDConstraint.h"
 #include "constraints/CXPBDBendingConstraint.h"
 #include "constraints/CXPBDEdgeLengthConstraint.h"
-#include "constraints/CXPBDGreenStrainConstraint.h"
 #include "constraints/CXPBDNeoHookeanConstraint.h"
 #include "constraints/CXPBDVolumeConstraint.h"
 

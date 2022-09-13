@@ -9,6 +9,7 @@
 
 using namespace chai3d;
 using namespace Eigen;
+using namespace std;
 
 class cXPBDThread : public cMesh
 {
@@ -49,8 +50,9 @@ public:
 
         for (int i = 0u; i < num_vertices; i++)
         {
+
             // draw thread along the y dimension
-            p_.row(i) = step*Vector3d(0,1,0);
+            p_.row(i) = i*step*Vector3d(0,1,0);
             // set the edge indices
             if (i < num_vertices - 1)
                 E_.row(i) = Vector2i(i,i+1);
@@ -63,7 +65,6 @@ public:
         v_ = p_; v_.setZero();
         m_.resize(num_vertices);
         m_.setConstant(0.001);
-
     }
 
     ~cXPBDThread()

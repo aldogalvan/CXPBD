@@ -236,4 +236,18 @@ private:
 
 };
 
+
+struct Constraint {
+    enum ConstraintType {
+        EDGE_CONSTRAINT, VOLUME_CONSTRAINT, NEOHOOKEAN_CONSTRAINT
+    } constraint_type;
+
+    ConstraintType type;
+
+    double* p0;
+    double* v0;
+
+
+};
+
 #endif //CXPBD_CXPBDDEFORMABLEOBJECT_H
