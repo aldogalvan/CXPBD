@@ -1,56 +1,17 @@
-#include <Eigen/Dense>
-#include <vector>
+#ifndef CUDAISFUN_COLLISION_H
+#define CUDAISFUN_COLLISION_H
+
 #include <set>
-#include "world/CXPBDDeformableObject.h"
-#include "world/CXPBDTool.h"
-#include "world/CXPBDToolMesh.h"
+#include <vector>
+#include "simulator.h"
+#include "boundingbox.h"
+
+struct meshObject;
 
 using namespace std;
 using namespace Eigen;
 
-#ifndef CXPBD_CXPBDCONTINUOUSCOLLISIONDETECTION_H
-#define CXPBD_CXPBDCONTINUOUSCOLLISIONDETECTION_H
-
-enum ColType
-{
-    VERTEXCOLLISION,
-    EDGECOLLISION,
-    FACECOLLISION
-};
-
-struct ColInfo {
-
-    // Type of collision
-    ColType type;
-
-    // time of collision
-    double t;
-
-    // Index of collided triangle
-    Vector3i triangle;
-
-    // Indices making up edge
-    pair<int,int> edge;
-
-    // Index of vertex
-    int vertex;
-
-    // Normal of triangle at t1
-    Vector3d normal1;
-
-    // Normal of triangle at t0
-    Vector3d normal0;
-
-    // Normal of triangle at tc
-    Vector3d normalc;
-
-    // Barycentric coordinates at collision
-    double alpha , beta , gamma;
-
-    // Normal vector
-    Vector3d normal;
-
-};
+void findCollisions(const float* d_goal, float* d_proxy, meshObject* obj);
 
 struct TimeInterval
 {
@@ -73,77 +34,76 @@ struct TimeInterval
     double l, u;
 };
 
-// dynamics collision finder
-bool findCollisions(Vector3d& goal, Vector3d& proxy, double toolRadius,
-                       cXPBDDeformableMesh* model, std::vector<ColInfo*>& collisions);
-
-// static collision finder
-bool findCollisions(Vector3d& proxy, double toolRadius,
-                    cXPBDDeformableMesh* model, std::vector<ColInfo*>& collisions);
-
 class CTCD {
 
 public:
+
+    // this function computes the broad phase collision detection
+    static vector<int> broadPhase(const float* d_goal, float* d_proxy, meshObject* obj);
+
+    // this function performs the narrow phase collision detection
+    static void narrowPhase(const float* d_goal, const float* d_proxy, const meshObject* obj,
+                            vector<int>& potentialCollisions);
 
 // Looks for collisions between edges (q0start, p0start) and (q1start, p1start) as they move towards
 // (q0end, p0end) and (q1end, p1end). Returns true if the edges ever come closer than a distance eta to each
 // other, and stores the earliest time (in the interval [0,1]) at which they do so in t.
 // WARNING: Does not work correctly if two edges are parallel at the time of intersection -- vertexEdgeCTCD
 // should catch this case, though.
-static bool edgeEdgeCTCD(const Vector3d &q0start,
-                         const Vector3d &p0start,
-                         const Vector3d &q1start,
-                         const Vector3d &p1start,
-                         const Vector3d &q0end,
-                         const Vector3d &p0end,
-                         const Vector3d &q1end,
-                         const Vector3d &p1end, double eta,
-                         double &t);
+    static bool edgeEdgeCTCD(const Vector3d &q0start,
+                             const Vector3d &p0start,
+                             const Vector3d &q1start,
+                             const Vector3d &p1start,
+                             const Vector3d &q0end,
+                             const Vector3d &p0end,
+                             const Vector3d &q1end,
+                             const Vector3d &p1end, double eta,
+                             double &t);
 
 // Looks for collisions between the vertex q0start and the face (q1start, q2start, q3start) as they move
 // towards q0end and (q1end, q2end, q3end). Returns true if the vertex and face ever come closer than a distance
 // eta to each, and stores the earliest time (in the interval [0,1]) at which they do so in t.
-static bool vertexFaceCTCD(const Vector3d& q0start,
-                           const Vector3d& q1start,
-                           const Vector3d& q2start,
-                           const Vector3d& q3start,
-                           const Vector3d& q0end,
-                           const Vector3d& q1end,
-                           const Vector3d& q2end,
-                           const Vector3d& q3end,
-                           double eta,
-                           double& t);
+    static bool vertexFaceCTCD(const Vector3d& q0start,
+                               const Vector3d& q1start,
+                               const Vector3d& q2start,
+                               const Vector3d& q3start,
+                               const Vector3d& q0end,
+                               const Vector3d& q1end,
+                               const Vector3d& q2end,
+                               const Vector3d& q3end,
+                               double eta,
+                               double& t);
 
-static bool vertexFaceCTCD(const Vector3d& q0start,
-                              const Vector3d& q1start,
-                              const Vector3d& q2start,
-                              const Vector3d& q3start,
-                              const Vector3d& q1end,
-                              const Vector3d& q2end,
-                              const Vector3d& q3end,
-                              double eta,
-                              double& t);
+    static bool vertexFaceCTCD(const Vector3d& q0start,
+                               const Vector3d& q1start,
+                               const Vector3d& q2start,
+                               const Vector3d& q3start,
+                               const Vector3d& q1end,
+                               const Vector3d& q2end,
+                               const Vector3d& q3end,
+                               double eta,
+                               double& t);
 
 // Looks for the degenerate case of collisions between the vertex q0start and the edge (q1start, s2start) as they
 // move towards q0end and (q1end, q2end). Returns true if the vertex and edge ever come closer than a distance
 // eta to each other, and stores the earliest time (in the interval [0,1]) at which they do so in t.
-static bool vertexEdgeCTCD(const Vector3d &q0start,
-                           const Vector3d &q1start,
-                           const Vector3d &q2start,
-                           const Vector3d &q0end,
-                           const Vector3d &q1end,
-                           const Vector3d &q2end,
-                           double eta,
-                           double &t);
+    static bool vertexEdgeCTCD(const Vector3d &q0start,
+                               const Vector3d &q1start,
+                               const Vector3d &q2start,
+                               const Vector3d &q0end,
+                               const Vector3d &q1end,
+                               const Vector3d &q2end,
+                               double eta,
+                               double &t);
 
 // Looks for the degenerate case of collisions between the vertices q1start and q2start, as they move towards
 // q1end and q2end. Returns true if the vertices ever come closer than a distane of eta to each other, and stores
 // the earliest time (in the interval [0,1]) at which they do so in t.
-static bool vertexVertexCTCD(const Vector3d &q1start,
-                             const Vector3d &q2start,
-                             const Vector3d &q1end,
-                             const Vector3d &q2end,
-                             double eta, double &t);
+    static bool vertexVertexCTCD(const Vector3d &q1start,
+                                 const Vector3d &q2start,
+                                 const Vector3d &q1end,
+                                 const Vector3d &q2end,
+                                 double eta, double &t);
 
 
 
@@ -194,6 +154,4 @@ private:
 
 };
 
-
-
-#endif //CXPBD_CXPBDCONTINUOUSCOLLISIONDETECTION_H
+#endif

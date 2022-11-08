@@ -45,6 +45,4 @@ void intersect(std::shared_ptr<BBox> left,
                std::vector<Collision>& collisions);
 
 
-
-
 #endif //CXPBD_CXPBDAABB_H

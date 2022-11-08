@@ -396,7 +396,6 @@ int main(int argc, char* argv[])
 
     // apply tetrahedron volume constraint
     xpbd_mesh->constrain_tetrahedron_volumes(0.0,0.00);
-
     //xpbd_mesh->constrain_neohookean_elasticity_potential(100,1);
 
     // wireframe vis

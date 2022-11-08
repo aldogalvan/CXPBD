@@ -1,7 +1,3 @@
-//
-// Created by aldof on 4/13/2022.
-//
-
 #include <iostream>
 #include "CXPBDAABB.h"
 

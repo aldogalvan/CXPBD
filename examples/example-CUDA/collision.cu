@@ -1,7 +1,7 @@
 #include <memory>
-#include "CXPBDContinuousCollisionDetection.h"
+#include "collision.h"
 #include "../../shared/rpoly.h"
-#include "CXPBDAABB.h"
+#include "boundingbox.h"
 
 
 static void Barycentric(double out[3], const Vector3d& A, const Vector3d& B, const Vector3d& Q)
@@ -151,6 +151,180 @@ TimeInterval TimeInterval::intersect(const std::vector<TimeInterval> &intervals)
         isect.u = min(it->u, isect.u);
     }
     return isect;
+}
+
+void CTCD::narrowPhase(const float* d_goal, const float* d_proxy, const meshObject* obj,
+                       vector<int>& potentialCollisions)
+{
+
+    /*
+    int ncol = potentialCollisions.size();
+    int* collisions = potentialCollisions.data();
+    int* d_collisions;
+    float* d_goal; float* d_proxy;
+    float* t_;
+
+    cudaMalloc((void**)collisions,ncol*sizeof(int));
+    cudaMalloc((void**)t_,ncol*sizeof(float));
+    cudaMalloc((void**)d_goal,3*sizeof(float));
+    cudaMalloc((void**)d_proxy,3*sizeof(float));
+
+    cudaMemcpy(d_collisions,collisions,ncol*sizeof(int),cudaMemcpyHostToDevice);
+    cudaMemcpy(d_goal,goal,3*sizeof(float),cudaMemcpyHostToDevice);
+    cudaMemcpy(d_proxy,proxy,3*sizeof(float),cudaMemcpyHostToDevice);
+*/
+    /*
+    for (const auto& it : potentialCollisions) {
+
+        // define collision info
+        Vector3d face = f_.row(it);
+        Vector3d A0 = plast_.row(face(0));
+        Vector3d B0 = plast_.row(face(1));
+        Vector3d C0 = plast_.row(face(2));
+        Vector3d N0 = -Nlast_.row(it.collidingTriangle2).normalized();
+        Vector3d A1 = p_.row(face(0));
+        Vector3d B1 = p_.row(face(1));
+        Vector3d C1 = p_.row(face(2));
+        Vector3d N1 = -N_.row(it.collidingTriangle2).normalized();
+
+        // time of collision
+        double t_;
+
+        bool flag = 0;
+
+        if (CTCD::vertexFaceCTCD(proxy,A0.transpose(),B0.transpose(),C0.transpose(),
+                                 goal,A1.transpose(),B1.transpose(),C1.transpose(),1e-6,t_))
+        {
+
+            double ep = 1e-6;
+
+            //! TODO: Separate the collision handling from collision detection
+
+            // Create a new collision object
+            ColInfo *col = new ColInfo;
+
+            // update collision info
+            col->t = t_;
+            col->triangle = face;
+
+            // Triangle at collision
+            Vector3d Ac = A0 + t_*(A1 - A0);
+            Vector3d Bc = B0 + t_*(B1 - B0);
+            Vector3d Cc = C0 + t_*(C1 - C0);
+
+            // Normal at collision
+            Vector3d Nc = N0 + t_*(N1 - N0);
+
+            // proxy at collision
+            Vector3d proxy_c = proxy + t_*(goal - proxy);
+
+            // add a threshold
+
+            // Barycentric coordinates on collision
+            double out[4];
+            Barycentric(out,Ac,Bc,Cc,proxy_c);
+
+            // move to barycentric coordinates
+            proxy = out[0]*A1/out[3] + out[1]*B1/out[3] + out[2]*C1/out[3];
+
+            // get the equation of the plane defined by the triangle
+            double A, B, C, D;
+            A = N1(0); B = N1(1); C = N1(2); D = -N1.dot(A1);
+
+            // move the proxy tangent to the plane
+            double dist = abs(A*goal(0) + B*goal(1) + C*goal(2) + D) / sqrt(pow(A,2) + pow(B,2) + pow(C,2));
+            Vector3d dgoal = goal + dist*N1;
+            proxy = dgoal;
+
+            // check if the proxy and goal point are
+            // on opposite sides of the triangle
+            // if so then add collision
+            if ( (proxy - A1).dot(N1) > 0 && (goal - A1).dot(N1) <= 0)
+            {
+                collisions.emplace_back(col);
+            }
+                // check if the proxy and goal point are
+                // both on outside of triangle
+                // if so then continue
+            else if ( (proxy - A1).dot(N1) >= 0 && (goal - A1).dot(N1) >= 0)
+            {
+                continue;
+            }
+                // check if the proxy and goal point are
+                // on opposite sides of triangle in degenerate case
+                // if so then project the proxy to the goal and continue
+            else if ((proxy - A1).dot(N1) < 0 && (goal - A1).dot(N1) >= 0)
+            {
+                proxy = goal;
+                continue;
+            }
+                // check if the proxy and goal point are
+                // both on inside of triangle
+                // if so then project to surface and add
+                // a error threshold
+            else if((proxy - A1).dot(N1) <= 0 && (goal - A1).dot(N1) <= 0)
+            {
+                //! NEED TO PERFORM REPROJECTION
+                double dist = abs(A*proxy(0) + B*proxy(1) + C*proxy(2) + D) / sqrt(pow(A,2) + pow(B,2) + pow(C,2));
+                proxy -= (dist + ep)*N1;
+                //proxy += 2*dist*N1;
+                //proxy += N1 * ep;
+                collisions.emplace_back(col);
+                //cout << (proxy - A1).dot(N1) << endl;
+                //cout << (proxy - A1).dot(N1) << endl;
+                //cout << out[0]/out[3] << "," << out[1]/out[3] << "," << out[2]/out[3] << endl;
+            }
+
+            // Now we slide along the point subject to friction
+            // very basic (will need to add)
+
+
+            // adjust a bit in normal direction to account
+            // for numerical errors
+            /*
+            if ((proxy - A1).dot(N1) < 1)
+            {
+                proxy += N1.normalized() * ep;
+            }
+            else
+            {
+                proxy -= N1.normalized() * ep;
+            }
+             */
+
+/*
+            ret = 1;
+        }
+
+
+        else if (CTCD::vertexEdgeCTCD(proxy,A0,B0,goal,A1,B1,1e-6,t_))
+        {
+            cout << "EDGE COLLISION 1" << endl;
+        }
+        else if (CTCD::vertexEdgeCTCD(proxy,B0,C0,goal,B1,C1,1e-6,t_))
+        {
+            cout << "EDGE COLLISION 2" << endl;
+        }
+        else if (CTCD::vertexEdgeCTCD(proxy,A0,C0,goal,A1,C1,1e-6,t_))
+        {
+            cout << "EDGE COLLISION 3" << endl;
+        }
+        else if (CTCD::vertexVertexCTCD(proxy ,A0,goal,A1 ,1E-6 ,t_))
+        {
+            cout << "VERTEX COLLISION 1" << endl;
+        }
+        else if (CTCD::vertexVertexCTCD(proxy,B0,goal,B1 ,1e-6 ,t_))
+        {
+            cout << "VERTEX COLLISION 2" << endl;
+        }
+        else if (CTCD::vertexVertexCTCD(proxy,C0,goal,C1 ,1e-6 ,t_))
+        {
+            cout << "VERTEX COLLISION 3" << endl;
+        }
+    }
+    */
+
+
 }
 
 int CTCD::getQuadRoots(double a, double b, double c, double &t0, double &t1) {
@@ -372,319 +546,6 @@ void CTCD::distancePoly3D(const Vector3d &x10,
     op[5] = 2 * C * D - 2 * F.dot(E) * minDSquared;
     op[6] = D * D - E.dot(E) * minDSquared;
     findIntervals(op, 6, result, false);
-}
-
-
-// Dynamic collison : Checks for collison along path of goal and proxy
-bool findCollisions(Vector3d& goal, Vector3d& proxy, double toolRadius,
-                    cXPBDDeformableMesh* model, std::vector<ColInfo*>& collisions)
-{
-
-    // flag
-    bool ret = 0;
-
-    // Builds a bounding box for the tool
-    auto toolBB_ = buildAABB(goal,proxy);
-
-    // Get the object primitives
-    const auto& f_ = model->faces();
-    const auto& p_ = model->positions();
-    const auto& plast_ = model->positions_last();
-    auto& N_ = model->normals();
-    auto& Nlast_ = model->normals_last();
-
-    std::vector<Collision> potentialCollisions;
-    intersect(toolBB_, model->bb(), potentialCollisions);
-    int it_count = 0;
-
-    for (const auto& it : potentialCollisions) {
-        // define collision info
-        Vector3i face = f_.row(it.collidingTriangle2);
-        Vector3d A0 = plast_.row(face(0));
-        Vector3d B0 = plast_.row(face(1));
-        Vector3d C0 = plast_.row(face(2));
-        Vector3d N0 = -Nlast_.row(it.collidingTriangle2).normalized();
-        Vector3d A1 = p_.row(face(0));
-        Vector3d B1 = p_.row(face(1));
-        Vector3d C1 = p_.row(face(2));
-        Vector3d N1 = -N_.row(it.collidingTriangle2).normalized();
-
-        // time of collision
-        double t_;
-
-        bool flag = 0;
-
-        if (CTCD::vertexFaceCTCD(proxy,A0.transpose(),B0.transpose(),C0.transpose(),
-                                 goal,A1.transpose(),B1.transpose(),C1.transpose(),1e-6,t_))
-        {
-
-            double ep = 1e-6;
-
-            //! TODO: Separate the collision handling from collision detection
-
-            // Create a new collision object
-            ColInfo *col = new ColInfo;
-
-            // update collision info
-            col->t = t_;
-            col->triangle = face;
-
-            // Triangle at collision
-            Vector3d Ac = A0 + t_*(A1 - A0);
-            Vector3d Bc = B0 + t_*(B1 - B0);
-            Vector3d Cc = C0 + t_*(C1 - C0);
-
-            // Normal at collision
-            Vector3d Nc = N0 + t_*(N1 - N0);
-
-            // proxy at collision
-            Vector3d proxy_c = proxy + t_*(goal - proxy);
-
-            // add a threshold
-
-            // Barycentric coordinates on collision
-            double out[4];
-            Barycentric(out,Ac,Bc,Cc,proxy_c);
-
-            // move to barycentric coordinates
-            proxy = out[0]*A1/out[3] + out[1]*B1/out[3] + out[2]*C1/out[3];
-
-            // get the equation of the plane defined by the triangle
-            double A, B, C, D;
-            A = N1(0); B = N1(1); C = N1(2); D = -N1.dot(A1);
-
-            // move the proxy tangent to the plane
-            double dist = abs(A*goal(0) + B*goal(1) + C*goal(2) + D) / sqrt(pow(A,2) + pow(B,2) + pow(C,2));
-            Vector3d dgoal = goal + dist*N1;
-            proxy = dgoal;
-
-            // check if the proxy and goal point are
-            // on opposite sides of the triangle
-            // if so then add collision
-            if ( (proxy - A1).dot(N1) > 0 && (goal - A1).dot(N1) <= 0)
-            {
-                collisions.emplace_back(col);
-            }
-                // check if the proxy and goal point are
-                // both on outside of triangle
-                // if so then continue
-            else if ( (proxy - A1).dot(N1) >= 0 && (goal - A1).dot(N1) >= 0)
-            {
-                continue;
-            }
-                // check if the proxy and goal point are
-                // on opposite sides of triangle in degenerate case
-                // if so then project the proxy to the goal and continue
-            else if ((proxy - A1).dot(N1) < 0 && (goal - A1).dot(N1) >= 0)
-            {
-                proxy = goal;
-                continue;
-            }
-                // check if the proxy and goal point are
-                // both on inside of triangle
-                // if so then project to surface and add
-                // a error threshold
-            else if((proxy - A1).dot(N1) <= 0 && (goal - A1).dot(N1) <= 0)
-            {
-                //! NEED TO PERFORM REPROJECTION
-                double dist = abs(A*proxy(0) + B*proxy(1) + C*proxy(2) + D) / sqrt(pow(A,2) + pow(B,2) + pow(C,2));
-                proxy -= (dist + ep)*N1;
-                //proxy += 2*dist*N1;
-                //proxy += N1 * ep;
-                collisions.emplace_back(col);
-                //cout << (proxy - A1).dot(N1) << endl;
-                //cout << (proxy - A1).dot(N1) << endl;
-                //cout << out[0]/out[3] << "," << out[1]/out[3] << "," << out[2]/out[3] << endl;
-            }
-
-            // Now we slide along the point subject to friction
-            // very basic (will need to add)
-
-
-            // adjust a bit in normal direction to account
-            // for numerical errors
-            /*
-            if ((proxy - A1).dot(N1) < 1)
-            {
-                proxy += N1.normalized() * ep;
-            }
-            else
-            {
-                proxy -= N1.normalized() * ep;
-            }
-             */
-
-
-            ret = 1;
-        }
-
-
-        else if (CTCD::vertexEdgeCTCD(proxy,A0,B0,goal,A1,B1,1e-6,t_))
-        {
-            cout << "EDGE COLLISION 1" << endl;
-        }
-        else if (CTCD::vertexEdgeCTCD(proxy,B0,C0,goal,B1,C1,1e-6,t_))
-        {
-            cout << "EDGE COLLISION 2" << endl;
-        }
-        else if (CTCD::vertexEdgeCTCD(proxy,A0,C0,goal,A1,C1,1e-6,t_))
-        {
-            cout << "EDGE COLLISION 3" << endl;
-        }
-        else if (CTCD::vertexVertexCTCD(proxy ,A0,goal,A1 ,1E-6 ,t_))
-        {
-            cout << "VERTEX COLLISION 1" << endl;
-        }
-        else if (CTCD::vertexVertexCTCD(proxy,B0,goal,B1 ,1e-6 ,t_))
-        {
-            cout << "VERTEX COLLISION 2" << endl;
-        }
-        else if (CTCD::vertexVertexCTCD(proxy,C0,goal,C1 ,1e-6 ,t_))
-        {
-            cout << "VERTEX COLLISION 3" << endl;
-        }
-
-
-    }
-    return ret;
-
-}
-
-// Static collision : Just checks for collision with proxy
-bool findCollisions(Vector3d& proxy, double toolRadius,
-                    cXPBDDeformableMesh* model, std::vector<ColInfo*>& collisions)
-{
-
-    // flag
-    bool ret = 0;
-
-    // Builds a bounding box for the tool
-    auto toolBB_ = buildAABB(proxy,toolRadius);
-
-    // Get the object primitives
-    const auto& f_ = model->faces();
-    const auto& v_ = model->positions();
-    const auto& vlast_ = model->positions();
-    auto& N_ = model->normals();
-    auto& Nlast_ = model->normals_last();
-
-    std::vector<Collision> potentialCollisions;
-    intersect(toolBB_, model->bb(), potentialCollisions);
-    int it_count = 0;
-
-    for (const auto& it : potentialCollisions) {
-
-        // define collision info
-        Vector3i face = f_.row(it.collidingTriangle2);
-        Vector3d A0 = vlast_.row(face(0));
-        Vector3d B0 = vlast_.row(face(1));
-        Vector3d C0  = vlast_.row(face(2));
-        Vector3d N0 = Nlast_.row(it.collidingTriangle2);
-        Vector3d A1 = v_.row(face(0));
-        Vector3d B1 = v_.row(face(1));
-        Vector3d C1 = v_.row(face(2));
-        Vector3d N1 = N_.row(it.collidingTriangle2);
-
-        // time of collision
-        double t_;
-
-        // index counter
-        int counter = 0;
-
-        if (CTCD::vertexFaceCTCD(
-                proxy ,
-                A0.transpose(),
-                B0.transpose(),
-                C0.transpose(),
-                A1.transpose(),
-                B1.transpose(),
-                C1.transpose(),
-                1e-6,
-                t_))
-        {
-            // check what type of collision it is
-
-            // Create a new collision object
-            collisions.emplace_back(new ColInfo);
-
-            // update collision info
-            collisions[counter]->t = t_;
-
-            // get the triangle on collision
-            Vector3d Ac;
-            Vector3d Bc;
-            Vector3d Cc;
-            Vector3d Nc;
-
-            // get the proxy on collision
-            Vector3d Pc;
-
-            // save normals
-            collisions[counter]->normal0 = N0;
-            collisions[counter]->normal1 = N1;
-
-            // case where the proxy collides within the time interval
-            if (t_ < 1.0)
-            {
-
-                // triangle vertices and normal on collision
-                Ac = (A1 - A0) * t_ + A0;
-                Bc = (B1 - B0) * t_ + B0;
-                Cc = (C1 - C0) * t_ + C0;
-                Nc = (N1 - N0) * t_ + N0;
-
-                // proxy position on collision
-                //Pc = (goal - proxy) * t_ + proxy;
-
-                // get barycentric coordinates
-                double area = ((Ac - Bc).cross(Ac - Cc)).norm()/2;
-                double alpha = ((Pc - Bc).cross(Pc - Cc)).norm()/(area*2);
-                double beta = ((Pc - Cc).cross(Pc - Ac)).norm()/(area*2);
-                double gamma = 1 - alpha - beta;
-
-                // std::cout << " : alpha , " << alpha << " : beta , " << beta << " : gamma , " << gamma << std::endl;
-
-                // check if center of proxy is within triangle
-                if ( 0 <= alpha <= 1 && 0 <= beta <= 1 && 0 <= gamma <= 1)
-                {
-                    // if inside then face collision
-                    collisions[counter]->type = FACECOLLISION;
-                    collisions[counter]->alpha = alpha;
-                    collisions[counter]->beta = beta;
-                    collisions[counter]->gamma = gamma;
-                    collisions[counter]->normalc = Nc;
-
-                    // std::cout << "INSIDE" << std::endl;
-
-                }
-                else
-                {
-                    // if not inside then find the closest point on triangle
-                    // and test is closer than tool radius
-                    // std::cout << "OUTSIDE" << std::endl;
-                }
-
-            }
-                // proxy collides outside of time interval
-            else
-            {
-                //std::cout << "COLLISION t > 1 " << std::endl;
-                Vector3d cp;
-
-                SolvePoint(A1,B1,C1,proxy,cp);
-                std::cout << cp.transpose() << std::endl;
-            }
-
-            // flag
-            ret = 1;
-
-            // increment counter
-            counter++;
-        }
-
-    }
-    return ret;
-
 }
 
 

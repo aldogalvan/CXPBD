@@ -2,16 +2,8 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/eigen" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/glad" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/glfw" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/imgui" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/libigl-imgui" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/_libigl-src/external/tetgen" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/eigen-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/eigen-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/external/IGL" vcs="Git" />
   </component>
 </project>
