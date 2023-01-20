@@ -1,19 +1,9 @@
-
-//------------------------------------------------------------------------------
 #include "chai3d.h"
 #include <thread>
-//------------------------------------------------------------------------------
+#include "simulator.h"
 #include <GLFW/glfw3.h>
-#include "world/CXPBDDeformableObject.h"
-#include "collision/CXPBDAABB.h"
-#include "world/CXPBDToolMesh.h"
-#include "world/CXPBDTool.h"
-#include "collision/CXPBDContinuousCollisionDetection.h"
-#include "tools/CXPBDThread.h"
-#include "tetgen.h"
 #include <Eigen/Core>
 #include <set>
-
 
 //------------------------------------------------------------------------------
 using namespace chai3d;
@@ -60,8 +50,11 @@ enum HapticStates
 // DECLARED VARIABLES
 //------------------------------------------------------------------------------
 
-// A deformable object using the XPBD library
-cXPBDDeformableMesh* box;
+// simulator
+simulator* sim;
+
+// mesh representing the object
+cMesh* simvis;
 
 // a world that contains all objects of the virtual environment
 cWorld* world;
@@ -72,16 +65,8 @@ cCamera* camera;
 // a light source to illuminate the objects in the world
 cDirectionalLight* light;
 
-cPositionalLight* light2;
-
 // a colored background
 cBackground* background;
-
-// the thread
-cXPBDThread* thread_;
-
-// the position of the suture
-shared_ptr<Eigen::Vector3d> suture_pos(new Eigen::Vector3d(0,0,0));
 
 // a font for rendering text
 cFontPtr font;
@@ -113,9 +98,6 @@ cThread* hapticsThread;
 // Graphics thread
 cThread* graphicsThread;
 
-// thread length, segments, and radius
-double length = 1; int segments = 20; double radius = 0.001;
-
 // a handle to window display context
 GLFWwindow* window = NULL;
 
@@ -146,8 +128,17 @@ cShapeLine* tool;
 // the length of the tool used for visualizetion
 double toolLength = 0.1;
 
+// this is the proxy stiffness
+double proxy_stiffness = 500;
+
+// the external force applied to the object based on collision
+Eigen::MatrixXd externalForce;
+
 // force
 cVector3d force(0,0,0);
+
+// scalong
+float wss = 5;
 
 //------------------------------------------------------------------------------
 // DECLARED FUNCTIONS
@@ -180,25 +171,6 @@ void updateHaptics(void);
 // this function closes the application
 void close(void);
 
-// this function creates the tetrahedral mesh
-void createTetrahedralMesh(void);
-
-// this function progresses time
-void updateDynamics(Eigen::MatrixXd& fext, double& dt, std::uint32_t iterations, bool gravityEnabled);
-
-// this function computes the collision constraints
-void proxyCollision(Eigen::Vector3d& goal_ , Eigen::Vector3d& proxy_, Eigen::MatrixXd& p_, Eigen::MatrixXd& plast_,
-                    cXPBDDeformableMesh* a_mesh, double t_, const ColInfo& collisions);
-
-void implicitCollision(Eigen::Vector3d& goal_ , Eigen::Vector3d& proxy_, Eigen::MatrixXd& p_, Eigen::MatrixXd& plast_,
-                       cXPBDDeformableMesh* a_mesh, double t_, const ColInfo& collisions);
-
-void testFriction(Eigen::Vector3d& goal_ , Eigen::Vector3d& proxy_, Eigen::MatrixXd& p_, Eigen::MatrixXd& plast_,
-                  cXPBDDeformableMesh* a_mesh, double t_, const ColInfo& collisions);
-
-void implicitCollision2(Eigen::Vector3d pos_ , Eigen::MatrixXd& p_, cXPBDDeformableMesh* a_mesh,  set<int> collisions);
-
-
 //---------------------------------------------------------------------------
 // DECLARED MACROS
 //---------------------------------------------------------------------------
@@ -214,6 +186,14 @@ int main(int argc, char* argv[])
 
     cout << endl;
     cout << "-----------------------------------" << endl;
+    cout << "CHAI3D" << endl;
+    cout << "Demo: 13-primitives" << endl;
+    cout << "Copyright 2003-2016" << endl;
+    cout << "-----------------------------------" << endl << endl << endl;
+    cout << "Keyboard Options:" << endl << endl;
+    cout << "[s] - Save copy of shadowmap to file" << endl;
+    cout << "[f] - Enable/Disable full screen mode" << endl;
+    cout << "[m] - Enable/Disable vertical mirroring" << endl;
     cout << "[q] - Exit application" << endl;
     cout << endl << endl;
 
@@ -302,7 +282,6 @@ int main(int argc, char* argv[])
     }
 #endif
 
-
     //--------------------------------------------------------------------------
     // WORLD - CAMERA - LIGHTING
     //--------------------------------------------------------------------------
@@ -318,7 +297,7 @@ int main(int argc, char* argv[])
     world->addChild(camera);
 
     // position and orient the camera
-    camera->set(cVector3d(0.5, 0.0, 0.5),    // camera position (eye)
+    camera->set(cVector3d(1.5, 0.0, 1.5),    // camera position (eye)
                 cVector3d(0.0, 0.0, 0.0),    // lookat position (target)
                 cVector3d(0.0, 0.0, 1.0));   // direction of the (up) vector
 
@@ -370,11 +349,29 @@ int main(int argc, char* argv[])
     // retrieve information about the current haptic device
     cHapticDeviceInfo info = hapticDevice->getSpecifications();
 
-
     //--------------------------------------------------------------------------
     // CREATE XPBD OBJECT
     //--------------------------------------------------------------------------
 
+    // creates the simulator
+    sim = new simulator;
+
+    // creates the mesh
+    simvis = new cMesh();
+    world->addChild(simvis);
+
+    // imports the mesh to chai3d
+    auto p = sim->positions();
+    auto f = sim->triangles();
+    for (int pi = 0 ; pi < p.rows();pi++)
+    {
+        simvis->newVertex((float)p(pi,0),(float)p(pi,1),(float)p(pi,2));
+    }
+    for (int fi = 0 ; fi < f.rows();fi++)
+    {
+        simvis->newTriangle(f(fi,0),f(fi,1),f(fi,2));
+    }
+    simvis->setWireMode(true,true);
 
     // define the radius of the tool (sphere)
     toolRadius = 0.01;
@@ -382,25 +379,8 @@ int main(int argc, char* argv[])
     // add the line to the world
     world->addChild(tool);
 
-    //--------------------------------------------------------------------------
-    // CREATE THREAD
-    //--------------------------------------------------------------------------
-
-    thread_ = new cXPBDThread(segments,length,radius);
-    world->addChild(thread_);
-    thread_->constrain_edge_lengths(0.05,0.05);
-    thread_->constrain_edge_bending(0.50,0.05);
-    suture_pos->setZero();
-    thread_->setSuturePos(suture_pos);
-    thread_->constrain_dynamic_point();
-    thread_->connectToChai3d();
-    thread_->setWireMode(true);
-    thread_->setEdgeLineWidth(0.01);
-    thread_->setShowEdges(true);
-    thread_->m_edgeLineColor = cColorf(1,0,0);
-    thread_->setUseVertexColors(true);
-    thread_->setVertexColor(chai3d::cColorf(0,0,1));
-
+    // set the external force vector equal to zero
+    externalForce.setZero();
 
     //--------------------------------------------------------------------------
     // WIDGETS
@@ -447,6 +427,7 @@ int main(int argc, char* argv[])
     // main graphic loop
     while (!glfwWindowShouldClose(window))
     {
+
         // process events
         updateGraphics();
 
@@ -458,6 +439,7 @@ int main(int argc, char* argv[])
 
         // signal frequency counter
         freqCounterGraphics.signal(1);
+
 
     }
 
@@ -642,6 +624,16 @@ void updateGraphics(void)
     // RENDER SCENE
     /////////////////////////////////////////////////////////////////////
 
+    auto p = sim->positions();
+
+    //std::cout << p.row(0) << std::endl;
+
+    // TODO: Parallelize
+    for (int i = 0; i < p.rows(); i++)
+    {
+        simvis->m_vertices->setLocalPos(i,p(i,0),p(i,1),p(i,2));
+    }
+
     // update shadow maps (if any)
     world->updateShadowMaps(false, mirroredDisplay);
 
@@ -669,9 +661,6 @@ enum cMode
 void updateHaptics(void)
 {
 
-    cPrecisionClock clock;
-    clock.start(true);
-
     // simulation in now running
     simulationRunning  = true;
     simulationFinished = false;
@@ -687,7 +676,6 @@ void updateHaptics(void)
 
     // get initial position
     hapticDevice->getPosition(pos);
-    *suture_pos = pos.eigen();
 
     // get the rotation
     hapticDevice->getRotation(theta);
@@ -700,9 +688,9 @@ void updateHaptics(void)
     tool->m_colorPointA.setWhite();
     tool->m_colorPointB.setWhite();
 
-    // stiffness constant
-    double k = 500;
-    double b = 1;
+    // stiffess constant
+    double k = 750;
+    double b = 0;
 
     // friction coefficient
     double us = 0.1;
@@ -711,19 +699,13 @@ void updateHaptics(void)
     // initial step
     double dt = 0.001;
 
-    Eigen::MatrixXd externalForce(thread_->numVerts(),3);
-    externalForce.setZero();
-
-
     // main haptic simulation loop
     while(simulationRunning) {
+
 
         /////////////////////////////////////////////////////////////////////
         // HAPTIC FORCE COMPUTATION
         /////////////////////////////////////////////////////////////////////
-
-        dt = clock.getCurrentTimeSeconds();
-        clock.reset();
 
         // sets the force equal zero
         force = cVector3d(0,0,0);
@@ -731,7 +713,7 @@ void updateHaptics(void)
 
         // gets the position
         hapticDevice->getPosition(pos);
-        *suture_pos = pos.eigen();
+        pos = wss*pos;
 
         // gets the velocity
         hapticDevice->getLinearVelocity(vel);
@@ -739,22 +721,22 @@ void updateHaptics(void)
         // get the rotation
         hapticDevice->getRotation(theta);
 
-        // get the rotational velocity
-
         // change to eigen
-        Eigen::Vector3d posEigen = pos.eigen(); Eigen::Vector3d proxyEigen = proxy.eigen();
+        float ppos[3]; float pproxy[3];
+        ppos[0] = 1000*((float)pos(0) + .01); ppos[1] = 1000*((float)pos(1)+.01); ppos[2] = 1000*((float)pos(2)+0.01);
+        pproxy[0] = 1000*(float)pos(0); pproxy[1] = 1000*(float)pos(1); pproxy[2] = 1000*(float)pos(2);
 
-        // update the dynamics
-        updateDynamics(externalForce, dt,1,true);
+        // command a force and update the dynamics
+        float force[3] = {0,0,0};
+        sim->updateDynamics(ppos,pproxy,force, 0,0.01);
 
         // sets the force equal zero
-        hapticDevice->setForceAndTorqueAndGripperForce(force,cVector3d(0,0,0),0);
-
-        auto p = thread_->positions();
+        hapticDevice->setForceAndTorqueAndGripperForce(cVector3d(0,0,0),cVector3d(0,0,0),0);
 
         // draw the tool
-        tool->m_pointA = cVector3d(pos);
-        tool->m_pointB = cVector3d(pos) + toolLength*cMul(theta,cVector3d(0,0,1));
+        tool->m_pointA = cVector3d(pproxy[0] / 1000,pproxy[1] / 1000,pproxy[2] / 1000);
+        tool->m_pointB = cVector3d(pproxy[0] / 1000,pproxy[1] / 1000,pproxy[2] / 1000)
+                         + toolLength*cMul(theta,cVector3d(0,0,1));
 
         // signal frequency counter
         freqCounterHaptics.signal(1);
@@ -764,66 +746,5 @@ void updateHaptics(void)
     simulationFinished = true;
 }
 
+// -----------------------------------------------------------------------------
 
-void updateDynamics(Eigen::MatrixXd& fext, double& dt, std::uint32_t iterations,
-                    bool gravityEnabled)
-{
-
-    // all object constraints
-    auto const& constraints_thread = thread_->constraints();
-
-    // number of constraints
-    auto const J_thread = constraints_thread.size();
-
-    // vector of lagrange multipliers
-    std::vector<double> lagrange_multipliers_thread(J_thread, 0.);
-
-    // gets the object velocity and positions
-    auto& v_thread = thread_->velocity();
-    auto& x_thread = thread_->positions();
-
-    // get the mass and acceleration
-    auto const& m_thread = thread_->mass();
-    Eigen::MatrixX3d a_thread = fext.array().colwise() / m_thread.array();
-
-    if (gravityEnabled)
-    {
-        a_thread.rowwise() -= Eigen::RowVector3d(0,0,9.81);
-    }
-
-    // set the force as zero
-    fext.setZero();
-
-    // explicit euler step
-    auto vexplicit_thread =  v_thread + dt * a_thread;
-    Eigen::MatrixXd p_thread = x_thread + dt * vexplicit_thread;
-
-
-    // sequential gauss seidel type solve
-    std::fill(lagrange_multipliers_thread.begin(), lagrange_multipliers_thread.end(), 0.0);
-    Eigen::Vector3d F(0,0,0);
-
-
-    for (auto n = 0u; n < iterations; ++n)
-    {
-        for (auto j_thread = 0u; j_thread < J_thread; ++j_thread)
-        {
-            auto const& constraint_thread = constraints_thread[j_thread];
-            constraint_thread->project(p_thread, x_thread, m_thread, lagrange_multipliers_thread[j_thread], dt,F);
-        }
-    }
-
-    // set the last positions
-    thread_->setVerticesLast();
-
-    // update solution
-    for (auto i = 0u; i < x_thread.rows(); ++i)
-    {
-        v_thread.row(i) = (p_thread.row(i) - x_thread.row(i)) / dt;
-        x_thread.row(i) = p_thread.row(i);
-    }
-
-    thread_->updateChai3d();
-
-}
-//-----------------

@@ -13,7 +13,6 @@
 #include "world/CXPBDToolMesh.h"
 #include "world/CXPBDTool.h"
 #include "collision/CXPBDContinuousCollisionDetection.h"
-#include "tetgen.h"
 #include <Eigen/Core>
 #include <set>
 
@@ -64,7 +63,7 @@ enum HapticStates
 //------------------------------------------------------------------------------
 
 // A deformable object using the XPBD library
-cXPBDDeformableMesh* box;
+cXPBDDeformableMesh* cloth;
 
 // a world that contains all objects of the virtual environment
 cWorld* world;
@@ -188,19 +187,6 @@ void createTetrahedralMesh(void);
 
 // this function progresses time
 void timestep(Eigen::MatrixXd& fext, double& timestep, std::uint32_t iterations, bool gravityEnabled);
-
-// this function computes the collision constraints
-void proxyCollision(Eigen::Vector3d& goal_ , Eigen::Vector3d& proxy_, Eigen::MatrixXd& p_, Eigen::MatrixXd& plast_,
-                    cXPBDDeformableMesh* a_mesh, double t_, const ColInfo& collisions);
-
-void implicitCollision(Eigen::Vector3d& goal_ , Eigen::Vector3d& proxy_, Eigen::MatrixXd& p_, Eigen::MatrixXd& plast_,
-                       cXPBDDeformableMesh* a_mesh, double t_, const ColInfo& collisions);
-
-void testFriction(Eigen::Vector3d& goal_ , Eigen::Vector3d& proxy_, Eigen::MatrixXd& p_, Eigen::MatrixXd& plast_,
-                  cXPBDDeformableMesh* a_mesh, double t_, const ColInfo& collisions);
-
-void implicitCollision2(Eigen::Vector3d pos_ , Eigen::MatrixXd& p_, cXPBDDeformableMesh* a_mesh,  set<int> collisions);
-
 
 //---------------------------------------------------------------------------
 // DECLARED MACROS
@@ -869,154 +855,6 @@ void updateHaptics(void)
 
     // exit haptics thread
     simulationFinished = true;
-}
-
-// -----------------------------------------------------------------------------
-
-void createTetrahedralMesh(void)
-{
-
-    tetgenio input;
-
-    // TetGen switches
-    char TETGEN_SWITCHES[] = "pq1.414a0.002";
-
-    if (input.load_off(RESOURCE_PATH("../../resources/ducky/cube.off")))
-    {
-        // use TetGen to tetrahedralize our mesh
-        tetgenio output;
-        tetrahedralize(TETGEN_SWITCHES, &input, &output);
-
-        Eigen::MatrixXd points(output.numberofpoints,3);
-
-        // create a vertex in the object for each point of the result
-        for (int p = 0, pi = 0; p < output.numberofpoints; ++p, pi += 3)
-        {
-            cVector3d point;
-            point.x(output.pointlist[pi + 0]);
-            point.y(output.pointlist[pi + 1]);
-            point.z(output.pointlist[pi + 2]);
-
-            points.row(p) = Eigen::RowVector3d(output.pointlist[pi + 0],
-                                               output.pointlist[pi + 1],
-                                               output.pointlist[pi + 2]);
-        }
-
-        // sets the vertices of the mesh
-        xpbd_mesh->setVertices(points);
-
-        Eigen::MatrixXi faces(output.numberoftrifaces,3);
-        auto adjtet = output.adjtetlist;
-
-        // create a triangle for each face on the surface
-        for (int t = 0, ti = 0; t < output.numberoftrifaces; ++t, ti += 3)
-        {
-            cVector3d p[3];
-            unsigned int vi[3];
-
-            for (int i = 0; i < 3; ++i)
-            {
-                int tc = output.trifacelist[ti + i];
-                vi[i] = tc;
-                int pi = tc * 3;
-                p[i].x(output.pointlist[pi + 0]);
-                p[i].y(output.pointlist[pi + 1]);
-                p[i].z(output.pointlist[pi + 2]);
-            }
-            //unsigned int index = a_object->newTriangle(p[1], p[0], p[2]);
-            //a_chai3dMesh->newTriangle(vi[0], vi[1], vi[2]);
-            faces.row(t) = Eigen::RowVector3i(vi[0],vi[1],vi[2]);
-        }
-
-        // sets the faces of the mesh
-        xpbd_mesh->setFaces(faces);
-
-        // find out exactly which vertices are on the inside and outside
-        set<int> inside, outside;
-        for (int t = 0; t < output.numberoftrifaces * 3; ++t)
-        {
-            outside.insert(output.trifacelist[t]);
-        }
-        for (int p = 0; p < output.numberofpoints; ++p)
-        {
-            if (outside.find(p) == outside.end())
-                inside.insert(p);
-        }
-
-        xpbd_mesh->setInsideOutside(inside,outside);
-
-        Eigen::MatrixXi tetrahedra(output.numberoftetrahedra,4);
-
-        for (int t = 0, ti = 0; t < output.numberoftetrahedra; ++t, ti += 4)
-        {
-
-            int v0 = output.tetrahedronlist[ti + 0];
-            int v1 = output.tetrahedronlist[ti + 1];
-            int v2 = output.tetrahedronlist[ti + 2];
-            int v3 = output.tetrahedronlist[ti + 3];
-
-            Eigen::RowVector4i tetrahedron;
-            tetrahedron[0] = v0;
-            tetrahedron[1] = v1;
-            tetrahedron[2] = v2;
-            tetrahedron[3] = v3;
-
-            tetrahedra.row(t) = (tetrahedron);
-        }
-
-        xpbd_mesh->setTetrahedra(tetrahedra);
-
-        Eigen::VectorXi facemap(faces.rows());
-        for (int i = 0; i < faces.rows() ; i++)
-        {
-            Eigen::RowVector3i face = faces.row(i);
-            std::set<int> faceset {face(0),face(1),face(2)};
-            for (int j = 0 ; j < tetrahedra.rows() ; j++)
-            {
-                Eigen::RowVector4i tet = tetrahedra.row(j);
-                std::set<int> tetset {tet(0),tet(1),tet(2),tet(3)};
-
-                if(std::includes(tetset.begin(), tetset.end(),faceset.begin(),faceset.end()))
-                {
-                    facemap(i) = j;
-                }
-            }
-        }
-
-        xpbd_mesh->setfacemap(facemap);
-
-        // get all the edges of our tetrahedra
-        set<pair<int, int>> springs;
-
-        for (int t = 0, ti = 0; t < output.numberoftetrahedra; ++t, ti += 4)
-        {
-            // store each edge of the tetrahedron as a pair of indices
-            for (int i = 0; i < 4; ++i) {
-                int v0 = output.tetrahedronlist[ti + i];
-                for (int j = i + 1; j < 4; ++j)
-                {
-                    int v1 = output.tetrahedronlist[ti + j];
-                    springs.insert(pair<int, int>(min(v0, v1), max(v0, v1)));
-                }
-            }
-        }
-
-        Eigen::MatrixXi edges(springs.size(),2);
-
-        int i = 0;
-
-        for (auto sp : springs)
-        {
-            edges.row(i) = Eigen::RowVector2i(sp.first, sp.second);
-            i++;
-        }
-        xpbd_mesh->setEdges(edges);
-    }
-
-    Eigen::VectorXd mass;
-    mass.setOnes(xpbd_mesh->numVerts());
-    mass *= .0001;
-    xpbd_mesh->setMass(mass);
 }
 
 void timestep(

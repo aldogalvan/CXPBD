@@ -26,9 +26,6 @@ __global__ void simple_bounding_box(aabb* aabbs, int* f, float* start, float* en
 
             }
         }
-
-        //printf("%i",ntris);
-        //printf("%i, %f , %f , %f , %f , %f , %f \n",globalIdx , aabbs[globalIdx].upper[0],aabbs[globalIdx].upper[1],aabbs[globalIdx].upper[2],aabbs[globalIdx].lower[0],aabbs[globalIdx].lower[1],aabbs[globalIdx].lower[2] );
     }
 }
 
@@ -51,8 +48,5 @@ __global__ void simple_broad_phase(aabb* lhs, aabb* rhs, int* col, int ntris)
 
         // if false then last is true
         col[globalIdx] = true;
-
-        //printf("RHS %i : %f , %f , %f , %f , %f , %f \n",globalIdx, rhs->lower[0] , rhs->lower[1] , rhs->lower[2] , rhs->upper[0] , rhs->upper[1] , rhs->upper[2] );
-        //printf("LHS %i : %f , %f , %f , %f , %f , %f \n",globalIdx, lhs[globalIdx].lower[0] , lhs[globalIdx].lower[1]  , lhs[globalIdx].lower[2] , lhs[globalIdx].upper[0] , lhs[globalIdx].upper[1]  , lhs[globalIdx].upper[2]  );
     }
 }

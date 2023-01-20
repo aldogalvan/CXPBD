@@ -5,7 +5,13 @@
 #include <vector>
 #include "simulator.h"
 
+
+struct meshObject;
+
 using namespace std;
+using namespace Eigen;
+
+void findCollisions(const float* d_goal, float* d_proxy, meshObject* obj);
 
 struct ColInfo
 {
@@ -22,25 +28,13 @@ struct ColInfo
     Vector3d* normal;
 };
 
-
-struct aabb
-{
-    float upper[3];
-    float lower[3];
-};
-
-// this function find the collisions
-bool findCollisions(const toolObject* tool, const meshObject* obj, vector<ColInfo*>& col_info);
-
-Vector3d closestPointOnTriangle( const Vector3d *triangle, const Vector3d &sourcePosition );
-
 struct TimeInterval
 {
     TimeInterval(double tl, double tu) : l(tl), u(tu)
     {
         if(l > u) std::swap(l, u);
         l = std::max(l, 0.0);
-        //u = std::min(u, 1.0);
+        u = std::min(u, 1.0);
     }
 
     TimeInterval() : l(0), u(0) {}
@@ -60,11 +54,11 @@ class CTCD {
 public:
 
     // this function computes the broad phase collision detection
-    static int* broadPhase(const toolObject* tool, const meshObject* obj);
+    static vector<int> broadPhase(const float* d_goal, float* d_proxy, meshObject* obj);
 
     // this function performs the narrow phase collision detection
-    static bool narrowPhase(const toolObject* tool, const meshObject* obj, int* potential_collisions,
-                            vector<ColInfo*>& col_info);
+    static void narrowPhase(const float* d_goal, const float* d_proxy, const meshObject* obj,
+                            vector<int>& potentialCollisions);
 
     // Looks for collisions between edges (q0start, p0start) and (q1start, p1start) as they move towards
     // (q0end, p0end) and (q1end, p1end). Returns true if the edges ever come closer than a distance eta to each
@@ -95,7 +89,15 @@ public:
                                double eta,
                                double& t);
 
-
+    static bool vertexFaceCTCD(const Vector3d& q0start,
+                               const Vector3d& q1start,
+                               const Vector3d& q2start,
+                               const Vector3d& q3start,
+                               const Vector3d& q1end,
+                               const Vector3d& q2end,
+                               const Vector3d& q3end,
+                               double eta,
+                               double& t);
 
 // Looks for the degenerate case of collisions between the vertex q0start and the edge (q1start, s2start) as they
 // move towards q0end and (q1end, q2end). Returns true if the vertex and edge ever come closer than a distance

@@ -1,129 +1,22 @@
 #include "collision.h"
 #include "collision_kernel.cuh"
 #include "../../shared/rpoly.h"
+#include "thrust/device_vector.h"
 #include "thrust/host_vector.h"
-#include <algorithm>
-#include <iomanip>
 
 /////////////////////////////////////////////////////////////////
 /// MAIN FUNCTION TO FIND COLLISIONS
 /////////////////////////////////////////////////////////////////
 
 
-Vector3d closestPointOnTriangle( const Vector3d *triangle, const Vector3d &sourcePosition )
-{
-    Vector3d edge0 = triangle[1] - triangle[0];
-    Vector3d edge1 = triangle[2] - triangle[0];
-    Vector3d v0 = triangle[0] - sourcePosition;
-
-    float a = edge0.dot( edge0 );
-    float b = edge0.dot( edge1 );
-    float c = edge1.dot( edge1 );
-    float d = edge0.dot( v0 );
-    float e = edge1.dot( v0 );
-
-    float det = a*c - b*b;
-    float s = b*e - c*d;
-    float t = b*d - a*e;
-
-    if ( s + t < det )
-    {
-        if ( s < 0.f )
-        {
-            if ( t < 0.f )
-            {
-                if ( d < 0.f )
-                {
-                    s = min(-d/a , 1.f);
-                    s = max(-d/a , 0.f);
-                    t = 0.f;
-                }
-                else
-                {
-                    s = 0.f;
-                    t = max( -e/c, 0.f);
-                    t = min( -e/c, 1.f);
-                }
-            }
-            else
-            {
-                s = 0.f;
-                t = max( -e/c, 0.f);
-                t = min(-e/c, 1.f);
-            }
-        }
-        else if ( t < 0.f )
-        {
-            s = min(-d/a , 1.f);
-            s = max(-d/a , 0.f);
-            t = 0.f;
-        }
-        else
-        {
-            float invDet = 1.f / det;
-            s *= invDet;
-            t *= invDet;
-        }
-    }
-    else
-    {
-        if ( s < 0.f )
-        {
-            float tmp0 = b+d;
-            float tmp1 = c+e;
-            if ( tmp1 > tmp0 )
-            {
-                float numer = tmp1 - tmp0;
-                float denom = a-2*b+c;
-                s = min( numer/denom, 1.f);
-                s = max(numer/denom,0.f);
-                t = 1-s;
-            }
-            else
-            {
-                t = min(-e/c, 1.f );
-                t = max(-e/c, 0.f );
-                s = 0.f;
-            }
-        }
-        else if ( t < 0.f )
-        {
-            if ( a+d > b+e )
-            {
-                float numer = c+e-b-d;
-                float denom = a-2*b+c;
-                s = min( numer/denom, 1.f);
-                s = max(numer/denom,0.f);
-                t = 1-s;
-            }
-            else
-            {
-                s = min( -e/c, 1.f );
-                s = max(-e/c, 0.f);
-                t = 0.f;
-            }
-        }
-        else
-        {
-            float numer = c+e-b-d;
-            float denom = a-2*b+c;
-            s = min( numer/denom, 1.f);
-            s = max(numer/denom,0.f);
-            t = 1.f - s;
-        }
-    }
-
-    return triangle[0] + s * edge0 + t * edge1;
-}
-
-bool findCollisions(const toolObject* tool, const meshObject* obj, vector<ColInfo*>& col_info)
+bool findCollisions(const float* pos, const float* pos_last, float* proxy, meshObject* obj)
 {
 
     // broad phase collision
-    auto potential_collisions = CTCD::broadPhase( tool, obj);
+    auto potential_collisions = CTCD::broadPhase(pos, pos_last, proxy, obj);
 
     // narrow phase collision detection
-    return CTCD::narrowPhase( tool, obj, potential_collisions, col_info);
+    return CTCD::narrowPhase(pos, pos_last,proxy, obj,potential_collisions);
 
 }
 
@@ -268,8 +161,7 @@ bool TimeInterval::overlap(const std::vector<TimeInterval> &intervals)
 
 TimeInterval TimeInterval::intersect(const std::vector<TimeInterval> &intervals)
 {
-    double upper =  numeric_limits<double>::infinity();
-    TimeInterval isect(0.0, upper);
+    TimeInterval isect(0.0, 1.0);
     for(std::vector<TimeInterval>::const_iterator it = intervals.begin(); it != intervals.end(); ++it)
     {
         isect.l = max(it->l, isect.l);
@@ -279,12 +171,8 @@ TimeInterval TimeInterval::intersect(const std::vector<TimeInterval> &intervals)
 }
 
 // this will run on the GPU
-int* CTCD::broadPhase(const toolObject* tool, const meshObject* obj)
+int* CTCD::broadPhase(const float* pos, const float* pos_last, float* proxy, meshObject* obj)
 {
-
-    auto tool_radius = tool->tool_radius;
-    auto pos = tool->pos;
-    auto proxy = tool->proxy_pos;
 
     // Builds a bounding box for the tool
     aabb* rhs = new aabb;
@@ -299,16 +187,17 @@ int* CTCD::broadPhase(const toolObject* tool, const meshObject* obj)
     // build the bounding box
     for (int i = 0 ; i < 3; i++)
     {
-        rhs->lower[i] = min(rhs->lower[i], pos[i] - tool_radius);
-        rhs->upper[i] = max(rhs->upper[i], pos[i] + tool_radius);
-        rhs->lower[i] = min(rhs->lower[i], proxy[i] - tool_radius);
-        rhs->upper[i] = max(rhs->upper[i], proxy[i] + tool_radius);
+        rhs->lower[i] = min(rhs->lower[i], pos[i]);
+        rhs->upper[i] = max(rhs->upper[i], pos[i]);
+        rhs->lower[i] = min(rhs->lower[i], proxy[i]);
+        rhs->upper[i] = max(rhs->upper[i], proxy[i]);
     }
 
     // the device pointer
     aabb* drhs;
     cudaMalloc((void**)&drhs,6*sizeof(float));
     cudaMemcpy(drhs,rhs,6*sizeof(float),cudaMemcpyHostToDevice);
+
 
     // the vector containing the possible collisions
     int* dcol;
@@ -318,16 +207,17 @@ int* CTCD::broadPhase(const toolObject* tool, const meshObject* obj)
     // BASICALLY ONLY COMPUTE THE BOUNDING BOX WHEN DYNAMICS ARE DONE
     // build bounding box
     aabb* dlhs;
-    cudaMalloc((void**)&dlhs,6*obj->nfaces*sizeof(float));
-    simple_bounding_box<<<4,1024>>>(dlhs,obj->d_fi,obj->d_xlast,obj->d_x,obj->nfaces);
+    cudaMalloc((void**)&dlhs,2*obj->nfaces*sizeof(float3));
+    simple_bounding_box<<<2,1024>>>(dlhs,obj->d_fi,obj->d_xlast,obj->d_x,obj->nfaces);
 
     // computes the lhs
-    simple_broad_phase<<<4,1024>>>(dlhs,drhs,dcol,obj->nfaces);
+    simple_broad_phase<<<2,1024>>>(dlhs,drhs,dcol,obj->nfaces);
 
    // return
    int* ret;
-   ret = (int*)malloc(obj->nfaces * sizeof(int));
+   ret = (int*)malloc(3 * obj->nfaces * sizeof (int));
    cudaMemcpy(ret, dcol, obj->nfaces * sizeof(int), cudaMemcpyDeviceToHost);
+
 
    // delete initialized pointer
    delete rhs;
@@ -339,14 +229,10 @@ int* CTCD::broadPhase(const toolObject* tool, const meshObject* obj)
 }
 
 // This will run on the CPU
-bool CTCD::narrowPhase(const toolObject* tool, const meshObject* obj, int* potential_collisions,
-                       vector<ColInfo*>& col_info) {
+bool CTCD::narrowPhase(const float* pos, const float* pos_last, float* proxy, const meshObject* obj,
+                       int* potentialCollisions) {
     // return value
     bool ret = 0;
-
-    // define
-    auto pos = tool->pos;
-    auto proxy = tool->proxy_pos;
 
     //proxy and goal to vector
     Vector3d q_start(proxy[0],proxy[1],proxy[2]);
@@ -366,13 +252,10 @@ bool CTCD::narrowPhase(const toolObject* tool, const meshObject* obj, int* poten
     // host side variables
     float *h_x_start;
     h_x_start = (float*)malloc(3*n_vertices*sizeof(float));
-
     float *h_x_end;
     h_x_end = (float*)malloc(3*n_vertices*sizeof(float));
-
     float *h_normal_start;
     h_normal_start = (float*)malloc(3*n_triangles*sizeof(float));
-
     float *h_normal_end;
     h_normal_end = (float*)malloc(3*n_triangles*sizeof(float));
 
@@ -383,10 +266,10 @@ bool CTCD::narrowPhase(const toolObject* tool, const meshObject* obj, int* poten
     cudaMemcpy(h_normal_end, d_normal_end, 3 * n_triangles * sizeof(float), cudaMemcpyDeviceToHost);
 
     // transfer device side to
+
     for (int idx = 0; idx < n_triangles; idx++) {
 
-        if (potential_collisions[idx] != 0)
-        {
+        if (potentialCollisions[idx] != 0) {
 
             // define collision info
             Vector3i f(h_fi[3 * idx + 0], h_fi[3 * idx + 1], h_fi[3 * idx + 2]);
@@ -401,38 +284,64 @@ bool CTCD::narrowPhase(const toolObject* tool, const meshObject* obj, int* poten
             Vector3d normal_end(-h_normal_end[3*idx+0],-h_normal_end[3*idx+1],-h_normal_end[3*idx+2]);
             normal_end = normal_end.normalized();
 
-            //cout << "Start" << endl;
-            //cout << q_start.transpose() << endl;
-            //cout << q_end.transpose() << endl << endl;
-            //cout << a_start.transpose() << endl;
-            //cout << b_start.transpose() << endl;
-            //cout << c_start.transpose() << endl << endl;
-            //cout << a_end.transpose() << endl;
-            //cout << b_end.transpose() << endl;
-            //cout << c_end.transpose() << endl<< endl << endl;
-
             // time of collision
             double t_;
 
             if (CTCD::vertexFaceCTCD(q_start, a_start.transpose(), b_start.transpose(), c_start.transpose(),
                                      q_end, a_end.transpose(), b_end.transpose(), c_end.transpose(), 1e-6, t_))
             {
-                // add a new collision
-                Vector3d start[3]; Vector3d end[3]; Vector3d normal[2];
-                start[0] = a_start; start[1] = b_start; start[2] = c_start;
-                end[0] = a_end; end[1] = b_end; end[2] = c_end;
-                normal[0] = normal_start; normal[1] = normal_end;
-                col_info.emplace_back(new ColInfo(t_,idx,start,end,normal));
-                ret = 1;
-            }
+                // do the haptics!
+                // you got this Aldo!
+                Vector3d normal_col = normal_start + t_*(normal_end - normal_start);
+                Vector3d q_col = q_start + t_*(q_end - q_start);
+                Vector3d a_col = a_start + t_*(a_end - a_start);
+                Vector3d b_col = b_start + t_*(b_end - b_start);
+                Vector3d c_col = c_start + t_*(c_end - c_start);
 
-            if (col_info.size() > 0)
-            {
-                // sort the struct
-                sort(col_info.begin(),col_info.end(),[](const ColInfo *a, const ColInfo *b){return a->t_ < b->t_;});
+                // error threshold
+                double ep = 1e-3;
+
+                // check if it is an inside outside collison
+                int in_out = (q_end - a_end).dot(normal_end);
+
+                if (in_out < 0)
+                {
+                    cout << "inside" << endl;
+                }
+                else
+                {
+                    cout << "outside" << endl;
+                }
+
+                // implicit collison handling
+                //*************************************************
+
+                // do case where the proxy collides with the object
+
+
+                //q_col += normal_col*ep;
+                //proxy[0] = q_col[0]; proxy[1] = q_col[1]; proxy[2] = q_col[2];
+
+
+                // do case where the object collides with the proxy
+                //*************************************************
+
+                // explicit collision handling
+                //*************************************************
+                // do case where the proxy collides with the object
+
+                // do case where the object collides with the proxy
+                //*************************************************
+                ret = 1;
             }
         }
         idx++;
+    }
+    // check if there was a collision
+    // if no then the proxy updates to current position
+    if (!ret)
+    {
+        proxy[0] = pos[0]; proxy[1] = pos[1]; proxy[2] = pos[2];
     }
 
     return ret;
@@ -463,8 +372,8 @@ void CTCD::checkInterval(double t1, double t2, double * op, int degree, vector<T
     // clamp values
     t1 = max(0.0, t1);
     t2 = max(0.0, t2);
-    //t1 = min(1.0, t1);
-    //t2 = min(1.0, t2);
+    t1 = min(1.0, t1);
+    t2 = min(1.0, t2);
 
     double tmid = (t2 + t1) / 2;
     double f = op[0];
@@ -554,7 +463,7 @@ void CTCD::findIntervals(double *op, int n, vector<TimeInterval> & intervals, bo
     {
         // both points stationary -- check if colliding at t=0
         if ((!pos && op[0] <= 0) || (pos && op[0] >= 0))
-            intervals.push_back(TimeInterval(0, numeric_limits<double>::infinity()));
+            intervals.push_back(TimeInterval(0, 1.0));
         return;
     }
 
@@ -565,15 +474,15 @@ void CTCD::findIntervals(double *op, int n, vector<TimeInterval> & intervals, bo
         if (time[0] >= 0)
             checkInterval(0, time[0], op, reducedDegree, intervals, pos);
         for (int i = 0; i < roots - 1; i++) {
-            if (!((time[i] < 0 && time[i + 1] < 0) ))
+            if (!((time[i] < 0 && time[i + 1] < 0) || (time[i] > 1.0 && time[i + 1] > 1.0)))
                 checkInterval(time[i], time[i + 1], op, reducedDegree, intervals, pos);
         }
         if (time[roots - 1] <= 1.0)
-            checkInterval(time[roots - 1], numeric_limits<double>::infinity(), op, reducedDegree, intervals, pos);
+            checkInterval(time[roots - 1], 1.0, op, reducedDegree, intervals, pos);
     }
     else
     {
-        checkInterval(0.0, numeric_limits<double>::infinity(), op, reducedDegree, intervals, pos);
+        checkInterval(0.0, 1.0, op, reducedDegree, intervals, pos);
     }
 }
 
@@ -880,7 +789,7 @@ bool CTCD::vertexFaceCTCD(const Vector3d& q0start,
         return false;
 
     bool col = false;
-    double mint = numeric_limits<double>::infinity();
+    double mint = 1.0;
     for (int i = 0; i < (int) coplane.size(); i++)
     {
         for (int j = 0; j < (int) e1.size(); j++)
@@ -979,7 +888,7 @@ bool CTCD::vertexEdgeCTCD(const Vector3d &q0start,
     if(colin.empty())
         return false;
 
-    double mint = numeric_limits<double>::infinity();
+    double mint = 1.0;
     bool col = false;
     for (int i = 0; i < (int) colin.size(); i++)
     {

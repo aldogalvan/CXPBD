@@ -81,12 +81,13 @@ void minimumColors(int N, int E,
 
 void meshObject::createTetrahedralMesh(float scale)
 {
+
     tetgenio input;
 
     // TetGen switches
-    char TETGEN_SWITCHES[] = "pq1.414a0.0001";
+    char TETGEN_SWITCHES[] = "pq1.414a0.0002";
 
-    if (input.load_off("/home/agalvan-admin/CLionProjects/CUDAIsFun/resources/cylinder.off")) {
+    if (input.load_off("/home/agalvan-admin/CXPBD/resources/ducky/cube.off")) {
         // use TetGen to tetrahedralize our mesh
         tetgenio output;
         tetrahedralize(TETGEN_SWITCHES, &input, &output);
@@ -103,7 +104,7 @@ void meshObject::createTetrahedralMesh(float scale)
         }
 
         // sets the vertices of the mesh
-        this->x = points;
+        this->x = scale*points;
 
         Matrix<int,Dynamic,Dynamic,RowMajor> faces(output.numberoftrifaces, 3);
         this->nfaces = output.numberoftrifaces;
@@ -222,70 +223,27 @@ void meshObject::createTetrahedralMesh(float scale)
         this->h_m =  (float*)malloc(this->nvertices*sizeof (float));
         for (int i = 0; i < this->nvertices; i++)
         {
-            this->h_m[i] = 1e-5;
+            this->h_m[i] = 0.001;
         }
-    }
-}
 
+        set<int> interior_set;
+        // find the indices that are in the middle
+        for (int i = 0; i < this->nvertices; i++)
+        {
+            if (abs(this->h_x[i,1]) < 0.1)
+            {
+                interior_set.insert(i);
+            }
+        }
 
-
-void simulator::initializeNeoHookeanConstraint(float alpha, float beta)
-{
-    // creates neohookean constraint
-    nhc = new NeohookeanConstraint;
-
-    // set values
-    nhc->h_alpha = alpha;
-    nhc->h_beta = beta;
-
-    // defines number of constraints
-    nhc->h_nconstraints = object->nelements;
-
-    // create the parameters
-    nhc->h_mu     = (nhc->h_young_modulus) / (2. * (1 + nhc->h_poisson_ratio));
-    nhc->h_lambda = (nhc->h_young_modulus * nhc->h_poisson_ratio) / ((1 + nhc->h_poisson_ratio) * (1 - 2 * nhc->h_poisson_ratio));
-
-
-    nhc->h_v0 = (float*)malloc(object->nelements*sizeof (float));
-    nhc->h_DmInv = (float*)malloc(9*object->nelements*sizeof (float));
-
-    for ( int i = 0 ; i < object->nelements; i++)
-    {
-
-        int v1 = object->T(i,0);
-        int v2 = object->T(i,1);
-        int v3 = object->T(i,2);
-        int v4 = object->T(i,3);
-
-        auto const p1 = object->x.row(v1);
-        auto const p2 = object->x.row(v2);
-        auto const p3 = object->x.row(v3);
-        auto const p4 = object->x.row(v4);
-
-        Matrix3f Dm;
-        Dm.col(0) = (p1 - p4).transpose();
-        Dm.col(1) = (p2 - p4).transpose();
-        Dm.col(2) = (p3 - p4).transpose();
-
-        nhc->h_v0[i]     = (1. / 6.) * Dm.determinant();
-
-        auto dminv =  Dm.inverse();
-
-        nhc->h_DmInv[9*i + 0] = dminv(0,0);
-        nhc->h_DmInv[9*i + 1] = dminv(0,1);
-        nhc->h_DmInv[9*i + 2] = dminv(0,2);
-        nhc->h_DmInv[9*i + 3] = dminv(1,0);
-        nhc->h_DmInv[9*i + 4] = dminv(1,1);
-        nhc->h_DmInv[9*i + 5] = dminv(1,2);
-        nhc->h_DmInv[9*i + 6] = dminv(2,0);
-        nhc->h_DmInv[9*i + 7] = dminv(2,1);
-        nhc->h_DmInv[9*i + 8] = dminv(2,2);
+        auto x_copy = x;
+        x_copy.col(1) = -x_copy.col(1);
 
     }
-    nhc->computeGraph(object->T);
-    nhc->transferToGPU();
+
 
 }
+
 
 void simulator::initializeVolumeConstraint(float alpha,float beta)
 {
@@ -587,7 +545,7 @@ void VolumeConstraint::computeGraph(MatrixXi E)
 
     this->h_graph = G.data();
     this->maxcolor = maxcolor;
-    std::cout << "Volume Graph Colors: " << maxcolor << std::endl;
+    std::cout << maxcolor << std::endl;
     this->maxelem = maxpool;
 
 }
@@ -733,7 +691,7 @@ void EdgeConstraint::computeGraph(MatrixXi E)
 
     this->h_graph = G.data();
     this->maxcolor = maxcolor;
-    std::cout << "Edge" << std::endl;
+    std::cout << maxcolor << std::endl;
     this->maxelem = maxpool;
 
 }

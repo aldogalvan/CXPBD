@@ -1,40 +1,12 @@
 #ifndef CUDAISFUN_SIMULATOR_H
 #define CUDAISFUN_SIMULATOR_H
 
-#include <vector>
 #include <Eigen/Dense>
 #include <iostream>
 
 using namespace Eigen;
 using namespace std;
 
-struct ColInfo;
-
-struct toolObject
-{
-    toolObject(float tool_radius_, float k_proxy_, float b_proxy_) :
-        tool_radius(tool_radius_), k_proxy(k_proxy_), b_proxy(b_proxy_)
-    {
-        force[0] = 0; force[1] = 0; force[2] = 0;
-    }
-
-    ~toolObject()
-    {
-
-    }
-
-    float pos[3];
-    float last_pos[3];
-    float proxy_pos[3];
-    float force[3];
-    float tool_radius;
-    float k_proxy;
-    float b_proxy;
-
-    // force and index
-    float force_mesh[3];
-    int index;
-};
 
 struct meshObject
 {
@@ -189,10 +161,9 @@ class simulator
 
 public:
 
-    simulator(toolObject* a_tool)
+    simulator()
     {
         object = new meshObject();
-        tool = a_tool;
 
         initializeEdgeConstraint(0.99,0.0);
         initializeVolumeConstraint(0.99,0.0);
@@ -246,13 +217,10 @@ public:
 
     // this function computes collision constraint solving
     // including collision detection
-    bool computeCollisions(vector<ColInfo*>& col_info);
-
-    // this function computes the collision constraints
-    void computeCollisionConstraints(vector<ColInfo*>& col_info);
+    bool computeCollisionConstraints(float* pos, float* pos_last, float* proxy);
 
     // this function updates the dynamics of the mesh
-    void updateDynamics(double dt);
+    void updateDynamics(float* pos, float* pos_last, float* proxy, float* f, int i ,double dt);
 
     // this funciton frees the GPU
     void freeGPU(void);
@@ -261,9 +229,6 @@ public:
 
     // the mesh object
     meshObject* object;
-
-    // the tool object
-    toolObject* tool;
 
     // neohookean constraint
     NeohookeanConstraint* nhc;
@@ -283,6 +248,7 @@ public:
 
     // sim variable
     float* d_p;
+
 
 };
 

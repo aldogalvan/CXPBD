@@ -84,7 +84,7 @@ void meshObject::createTetrahedralMesh(float scale)
     tetgenio input;
 
     // TetGen switches
-    char TETGEN_SWITCHES[] = "pq1.414a0.0001";
+    char TETGEN_SWITCHES[] = "pq1.414a0.002";
 
     if (input.load_off("/home/agalvan-admin/CLionProjects/CUDAIsFun/resources/cylinder.off")) {
         // use TetGen to tetrahedralize our mesh
@@ -103,7 +103,7 @@ void meshObject::createTetrahedralMesh(float scale)
         }
 
         // sets the vertices of the mesh
-        this->x = points;
+        this->x = scale*points;
 
         Matrix<int,Dynamic,Dynamic,RowMajor> faces(output.numberoftrifaces, 3);
         this->nfaces = output.numberoftrifaces;
@@ -222,7 +222,7 @@ void meshObject::createTetrahedralMesh(float scale)
         this->h_m =  (float*)malloc(this->nvertices*sizeof (float));
         for (int i = 0; i < this->nvertices; i++)
         {
-            this->h_m[i] = 1e-5;
+            this->h_m[i] = 0.01;
         }
     }
 }

@@ -1,46 +1,18 @@
 #ifndef CUDAISFUN_SIMULATOR_H
 #define CUDAISFUN_SIMULATOR_H
 
-#include <vector>
 #include <Eigen/Dense>
 #include <iostream>
 
 using namespace Eigen;
 using namespace std;
 
-struct ColInfo;
-
-struct toolObject
-{
-    toolObject(float tool_radius_, float k_proxy_, float b_proxy_) :
-        tool_radius(tool_radius_), k_proxy(k_proxy_), b_proxy(b_proxy_)
-    {
-        force[0] = 0; force[1] = 0; force[2] = 0;
-    }
-
-    ~toolObject()
-    {
-
-    }
-
-    float pos[3];
-    float last_pos[3];
-    float proxy_pos[3];
-    float force[3];
-    float tool_radius;
-    float k_proxy;
-    float b_proxy;
-
-    // force and index
-    float force_mesh[3];
-    int index;
-};
 
 struct meshObject
 {
     meshObject()
     {
-        createTetrahedralMesh(1000.0);
+        createClothMesh(1000.0);
         transferToGPU();
         computeNormals();
 
@@ -60,7 +32,7 @@ struct meshObject
     void freeGPU(void);
 
     // this function creates the mesh object
-    void createTetrahedralMesh(float scale);
+    void createClothMesh(float scale);
 
     // this function computes the normals in a parallel fashion
     void computeNormals(void);
@@ -91,7 +63,7 @@ struct meshObject
 
 };
 
-struct NeohookeanConstraint
+struct BendingConstraint
 {
     // this function transfers all contents to the GPU
     void transferToGPU(void);
@@ -117,30 +89,6 @@ struct NeohookeanConstraint
 
 };
 
-struct VolumeConstraint
-{
-    // this function transfers all contents to the GPU
-    void transferToGPU(void);
-
-    // this function computes a graph for this constraint
-    void computeGraph(MatrixXi E);
-
-    // number of constraints (elements)
-    int h_nconstraints;
-    int d_nconstraints;
-
-    // graph
-    int* h_graph;
-    int* d_graph;
-    int maxcolor;
-    int maxelem;
-
-    // values for neohookean constraint
-    float h_alpha; float h_beta; float* h_v0;
-
-    // define device variablesfloat d_young_modulus; float d_poisson_ratio; float d_mu; float d_lambda;
-    float d_alpha; float d_beta; float* d_v0; float* d_lagrange;
-};
 
 struct EdgeConstraint
 {
@@ -189,17 +137,14 @@ class simulator
 
 public:
 
-    simulator(toolObject* a_tool)
+    simulator()
     {
         object = new meshObject();
-        tool = a_tool;
 
         initializeEdgeConstraint(0.99,0.0);
-        initializeVolumeConstraint(0.99,0.0);
-        initializeFixedPointConstraint();
+        initializeBendingConstraint(0.99,0.0);
 
         allocMemory();
-        object->computeNormals();
 
     }
 
@@ -221,10 +166,7 @@ public:
     void allocMemory(void);
 
     // this function initializes a neoHookean constraint
-    void initializeNeoHookeanConstraint(float alpha, float beta);
-
-    // this function initializes a volume constraint
-    void initializeVolumeConstraint(float alpha, float beta);
+    void initializeBendingConstraint(float alpha, float beta);
 
     // this funciton innitializes a edge length constraint
     void initializeEdgeConstraint(float alpha, float beta);
@@ -233,10 +175,7 @@ public:
     void initializeFixedPointConstraint(void);
 
     // this function computes a neohookean constraint
-    void computeNeohookeanConstraint(float* d_p);
-
-    // this function computes the volume constraint
-    void computeVolumeConstraint(float* d_p);
+    void computeBendingConstraint(float* d_p);
 
     // this function computes an edge constraint
     void computeEdgeConstraint(float* d_p);
@@ -246,13 +185,10 @@ public:
 
     // this function computes collision constraint solving
     // including collision detection
-    bool computeCollisions(vector<ColInfo*>& col_info);
-
-    // this function computes the collision constraints
-    void computeCollisionConstraints(vector<ColInfo*>& col_info);
+    void computeCollisionConstraints(float* goal, float* proxy);
 
     // this function updates the dynamics of the mesh
-    void updateDynamics(double dt);
+    void updateDynamics(float* goal, float* proxy, float* f, int i, double dt);
 
     // this funciton frees the GPU
     void freeGPU(void);
@@ -262,11 +198,8 @@ public:
     // the mesh object
     meshObject* object;
 
-    // the tool object
-    toolObject* tool;
-
     // neohookean constraint
-    NeohookeanConstraint* nhc;
+    BendingConstraint* nhc;
 
     // fixed point constraint
     FixedPointConstraint* fpc;
@@ -274,15 +207,13 @@ public:
     // edge constraint
     EdgeConstraint* ec;
 
-    // volume constraint
-    VolumeConstraint* vc;
-
     // timestep (set 0.001 as default)
     float h_dt = 0.001;
     float d_dt = 0.001;
 
     // sim variable
     float* d_p;
+
 
 };
 

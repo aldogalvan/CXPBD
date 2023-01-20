@@ -53,8 +53,14 @@ enum HapticStates
 // simulator
 simulator* sim;
 
+// the tool
+toolObject* tool_sim;
+
 // mesh representing the object
 cMesh* simvis;
+
+// sphere representing the tool
+cShapeSphere* tool;
 
 // a world that contains all objects of the virtual environment
 cWorld* world;
@@ -121,18 +127,6 @@ cGenericHapticDevicePtr hapticDevice;
 
 // the radius of the tool
 double toolRadius;
-
-// the line used for visualization
-cShapeLine* tool;
-
-// the length of the tool used for visualizetion
-double toolLength = 0.1;
-
-// this is the proxy stiffness
-double proxy_stiffness = 500;
-
-// the external force applied to the object based on collision
-Eigen::MatrixXd externalForce;
 
 // force
 cVector3d force(0,0,0);
@@ -353,8 +347,20 @@ int main(int argc, char* argv[])
     // CREATE XPBD OBJECT
     //--------------------------------------------------------------------------
 
+    // define the radius of the tool (sphere)
+    toolRadius = 0.025;
+
+    // define the proxy stiffness
+    float k_stiffness = 100;
+
+    // defione the proxy damping
+    float b_damping = 1;
+
+    // creates a tool object
+    tool_sim = new toolObject(toolRadius,k_stiffness,b_damping);
+
     // creates the simulator
-    sim = new simulator;
+    sim = new simulator(tool_sim);
 
     // creates the mesh
     simvis = new cMesh();
@@ -367,20 +373,17 @@ int main(int argc, char* argv[])
     {
         simvis->newVertex((float)p(pi,0),(float)p(pi,1),(float)p(pi,2));
     }
+
     for (int fi = 0 ; fi < f.rows();fi++)
     {
         simvis->newTriangle(f(fi,0),f(fi,1),f(fi,2));
     }
-    simvis->setWireMode(true,true);
 
-    // define the radius of the tool (sphere)
-    toolRadius = 0.01;
+    simvis->setWireMode(true,true);
 
     // add the line to the world
     world->addChild(tool);
 
-    // set the external force vector equal to zero
-    externalForce.setZero();
 
     //--------------------------------------------------------------------------
     // WIDGETS
@@ -409,11 +412,6 @@ int main(int argc, char* argv[])
     hapticsThread = new cThread();
     hapticsThread->start(updateHaptics, CTHREAD_PRIORITY_HAPTICS);
 
-    // creates a thread which starts the main graphics rendering loop
-    // TODO: FIGURE THIS OUT!
-    //graphicsThread = new cThread();
-    //graphicsThread->start(updateGraphics, CTHREAD_PRIORITY_GRAPHICS);
-
     // setup callback when application exits
     atexit(close);
 
@@ -439,7 +437,6 @@ int main(int argc, char* argv[])
 
         // signal frequency counter
         freqCounterGraphics.signal(1);
-
 
     }
 
@@ -668,33 +665,24 @@ void updateHaptics(void)
     // declare some variables
     cVector3d pos;
     cVector3d vel;
-    cVector3d proxy;
     cMatrix3d theta;
-    cMatrix3d omega;
     cVector3d force;
     cVector3d torque;
 
+    double scale = 5.0;
+
     // get initial position
     hapticDevice->getPosition(pos);
+    tool_sim->pos[0] = (float)pos(0); tool_sim->pos[1] = (float)pos(1); tool_sim->pos[2] = (float)pos(2);
+    tool_sim->last_pos[0] = (float)pos(0); tool_sim->last_pos[1] = (float)pos(1); tool_sim->last_pos[2] = (float)pos(2);
+    tool_sim->proxy_pos[0] = (float)pos(0); tool_sim->proxy_pos[1] = (float)pos(1); tool_sim->proxy_pos[2] = (float)pos(2);
 
     // get the rotation
     hapticDevice->getRotation(theta);
 
     // create the line representing tool
-    tool = new cShapeLine(pos , pos + toolLength*cVector3d(0,0,1));
+    tool = new cShapeSphere(toolRadius);
     world->addChild(tool);
-
-    // set color at each point
-    tool->m_colorPointA.setWhite();
-    tool->m_colorPointB.setWhite();
-
-    // stiffess constant
-    double k = 750;
-    double b = 0;
-
-    // friction coefficient
-    double us = 0.1;
-    double uk = 0.1;
 
     // initial step
     double dt = 0.001;
@@ -711,9 +699,12 @@ void updateHaptics(void)
         force = cVector3d(0,0,0);
         torque = cVector3d(0,0,0);
 
+        // set previous position
+        *tool_sim->last_pos = *tool_sim->pos;
+
         // gets the position
         hapticDevice->getPosition(pos);
-        pos = wss*pos;
+        tool_sim->pos[0] = scale*pos(0); tool_sim->pos[1] = scale*pos(1) ; tool_sim->pos[2] = scale*pos(2);
 
         // gets the velocity
         hapticDevice->getLinearVelocity(vel);
@@ -721,22 +712,16 @@ void updateHaptics(void)
         // get the rotation
         hapticDevice->getRotation(theta);
 
-        // change to eigen
-        float ppos[3]; float pproxy[3];
-        ppos[0] = 1000*((float)pos(0) + .01); ppos[1] = 1000*((float)pos(1)+.01); ppos[2] = 1000*((float)pos(2)+0.01);
-        pproxy[0] = 1000*(float)pos(0); pproxy[1] = 1000*(float)pos(1); pproxy[2] = 1000*(float)pos(2);
-
         // command a force and update the dynamics
-        float force[3] = {0,0,0};
-        sim->updateDynamics(ppos,pproxy,force, 0,0.01);
+        float* force;
+        sim->updateDynamics(dt);
 
         // sets the force equal zero
-        hapticDevice->setForceAndTorqueAndGripperForce(cVector3d(0,0,0),cVector3d(0,0,0),0);
+        hapticDevice->setForceAndTorqueAndGripperForce(cVector3d(tool_sim->force[0],tool_sim->force[1],tool_sim->force[2]),
+                                                       cVector3d(0,0,0),0);
 
         // draw the tool
-        tool->m_pointA = cVector3d(pproxy[0] / 1000,pproxy[1] / 1000,pproxy[2] / 1000);
-        tool->m_pointB = cVector3d(pproxy[0] / 1000,pproxy[1] / 1000,pproxy[2] / 1000)
-                + toolLength*cMul(theta,cVector3d(0,0,1));
+        tool->setLocalPos(cVector3d(tool_sim->proxy_pos[0] ,tool_sim->proxy_pos[1],tool_sim->proxy_pos[2]));
 
         // signal frequency counter
         freqCounterHaptics.signal(1);

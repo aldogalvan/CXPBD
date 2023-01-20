@@ -5,23 +5,8 @@
 #include <vector>
 #include "simulator.h"
 
-using namespace std;
 
-struct ColInfo
-{
-    ColInfo(double t, int collision_index, Vector3d start_[3], Vector3d end_[3], Vector3d normal_[2]) :
-            t_(t) , collision_index_(collision_index), start(start_), end(end_), normal(normal_)
-    {
-
-    }
-
-    double t_;
-    int collision_index_;
-    Vector3d* start;
-    Vector3d* end;
-    Vector3d* normal;
-};
-
+struct meshObject;
 
 struct aabb
 {
@@ -29,10 +14,10 @@ struct aabb
     float lower[3];
 };
 
-// this function find the collisions
-bool findCollisions(const toolObject* tool, const meshObject* obj, vector<ColInfo*>& col_info);
+using namespace std;
+using namespace Eigen;
 
-Vector3d closestPointOnTriangle( const Vector3d *triangle, const Vector3d &sourcePosition );
+bool findCollisions(const float* pos, const float* pos_last, float* proxy, meshObject* obj);
 
 struct TimeInterval
 {
@@ -40,7 +25,7 @@ struct TimeInterval
     {
         if(l > u) std::swap(l, u);
         l = std::max(l, 0.0);
-        //u = std::min(u, 1.0);
+        u = std::min(u, 1.0);
     }
 
     TimeInterval() : l(0), u(0) {}
@@ -60,11 +45,11 @@ class CTCD {
 public:
 
     // this function computes the broad phase collision detection
-    static int* broadPhase(const toolObject* tool, const meshObject* obj);
+    static int* broadPhase(const float* pos, const float* pos_last, float* proxy, meshObject* obj);
 
     // this function performs the narrow phase collision detection
-    static bool narrowPhase(const toolObject* tool, const meshObject* obj, int* potential_collisions,
-                            vector<ColInfo*>& col_info);
+    static bool narrowPhase(const float* pos, const float* pos_last, float* proxy, const meshObject* obj,
+                            int* potentialCollisions);
 
     // Looks for collisions between edges (q0start, p0start) and (q1start, p1start) as they move towards
     // (q0end, p0end) and (q1end, p1end). Returns true if the edges ever come closer than a distance eta to each

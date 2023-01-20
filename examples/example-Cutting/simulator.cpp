@@ -1,8 +1,9 @@
 #include "simulator.h"
-#include "tetgen/tetgen.h"
 #include <iostream>
 #include <queue>
 #include <set>
+#include <map>
+
 
 
 // Function to count the minimum
@@ -79,252 +80,51 @@ void minimumColors(int N, int E,
     std::cout << minColor << std::endl;
 }
 
-void meshObject::createTetrahedralMesh(float scale)
+void meshObject::createClothMesh(float scale)
 {
-    tetgenio input;
 
-    // TetGen switches
-    char TETGEN_SWITCHES[] = "pq1.414a0.0001";
-
-    if (input.load_off("/home/agalvan-admin/CLionProjects/CUDAIsFun/resources/cylinder.off")) {
-        // use TetGen to tetrahedralize our mesh
-        tetgenio output;
-        tetrahedralize(TETGEN_SWITCHES, &input, &output);
-
-        this->nvertices = output.numberofpoints;
-        Matrix<float,Dynamic,Dynamic,RowMajor> points(output.numberofpoints, 3);
-
-        // create a vertex in the object for each point of the result
-        for (int p = 0, pi = 0; p < output.numberofpoints; ++p, pi += 3)
-        {
-            points.row(p) = RowVector3f(output.pointlist[pi + 0],
-                                               output.pointlist[pi + 1],
-                                               output.pointlist[pi + 2]);
-        }
-
-        // sets the vertices of the mesh
-        this->x = points;
-
-        Matrix<int,Dynamic,Dynamic,RowMajor> faces(output.numberoftrifaces, 3);
-        this->nfaces = output.numberoftrifaces;
-
-        // create a triangle for each face on the surface
-        for (int t = 0, ti = 0; t < output.numberoftrifaces; ++t, ti += 3) {
-            unsigned int vi[3];
-
-            for (int i = 0; i < 3; ++i)
-            {
-                int tc = output.trifacelist[ti + i];
-                vi[i] = tc;
-                int pi = tc * 3;
-            }
-            //unsigned int index = a_object->newTriangle(p[1], p[0], p[2]);
-            //a_chai3dMesh->newTriangle(vi[0], vi[1], vi[2]);
-            faces.row(t) = RowVector3i(vi[0], vi[1], vi[2]);
-        }
-
-        // sets the faces of the mesh
-        this->F = faces;
-
-        this->nelements = output.numberoftetrahedra;
-        Matrix<int,Dynamic,Dynamic,RowMajor> tetrahedra(output.numberoftetrahedra, 4);
-        MatrixXd tetrahedra_centroids(output.numberoftetrahedra, 3);
-
-        for (int t = 0, ti = 0; t < output.numberoftetrahedra; ++t, ti += 4) {
-
-            int v0 = output.tetrahedronlist[ti + 0];
-            int v1 = output.tetrahedronlist[ti + 1];
-            int v2 = output.tetrahedronlist[ti + 2];
-            int v3 = output.tetrahedronlist[ti + 3];
-
-            RowVector4i tetrahedron;
-            tetrahedron[0] = v0;
-            tetrahedron[1] = v1;
-            tetrahedron[2] = v2;
-            tetrahedron[3] = v3;
-
-
-            tetrahedra.row(t) = (tetrahedron);
-
-        }
-
-        // compute the neighbors for each tetrahedron (share faces)
-        vector<set<int>> tetrahedra_neighbors[output.numberoftetrahedra];
-
-        for (int i = 0; i < output.numberoftetrahedra; i++) {
-            set<int> temp;
-            temp.insert(tetrahedra(i, 0));
-            temp.insert(tetrahedra(i, 1));
-            temp.insert(tetrahedra(i, 2));
-            temp.insert(tetrahedra(i, 3));
-
-            for (int j = 0; j < output.numberoftetrahedra; j++) {
-                if (i != j) {
-                    temp.insert(tetrahedra(i, 0));
-                    temp.insert(tetrahedra(i, 1));
-                    temp.insert(tetrahedra(i, 2));
-                    temp.insert(tetrahedra(i, 3));
-
-                    if (temp.size() == 5) {
-                        tetrahedra_neighbors->at(i).insert(j);
-                    }
-                }
-            }
-
-        }
-
-        // get all the edges of our tetrahedra
-        set<pair<int, int>> springs;
-
-        for (int t = 0, ti = 0; t < output.numberoftetrahedra; ++t, ti += 4)
-        {
-            // store each edge of the tetrahedron as a pair of indices
-            for (int i = 0; i < 4; ++i) {
-                int v0 = output.tetrahedronlist[ti + i];
-                for (int j = i + 1; j < 4; ++j)
-                {
-                    int v1 = output.tetrahedronlist[ti + j];
-                    springs.insert(pair<int, int>(min(v0, v1), max(v0, v1)));
-                }
-            }
-        }
-
-        Matrix<int,Dynamic,Dynamic,RowMajor> edges(springs.size(),2);
-
-        int i = 0;
-
-        for (auto sp : springs)
-        {
-            edges.row(i) = Eigen::RowVector2i(sp.first, sp.second);
-            i++;
-        }
-
-        this->E = edges;
-        this->h_ei = this->E.data();
-        this->nedges = edges.rows();
-
-        // set the tetrahedra position
-        this->T = tetrahedra;
-
-        // set initial velocity to zero
-        this->xdot = this->x;
-        this->xdot.setZero();
-
-        // create pointer arrays
-        this->h_ti = this->T.data();
-        this->h_x = this->x.data();
-        this->h_xlast = this->x.data();
-        this->h_x0 = this->x.data();
-        this->h_xdot = this->xdot.data();
-        this->h_fi = this->F.data();
-
-        // create mass array
-        this->h_m =  (float*)malloc(this->nvertices*sizeof (float));
-        for (int i = 0; i < this->nvertices; i++)
-        {
-            this->h_m[i] = 1e-5;
-        }
-    }
 }
 
 
 
-void simulator::initializeNeoHookeanConstraint(float alpha, float beta)
+void simulator::initializeBendingConstraint(float alpha, float beta)
 {
-    // creates neohookean constraint
-    nhc = new NeohookeanConstraint;
 
-    // set values
-    nhc->h_alpha = alpha;
-    nhc->h_beta = beta;
-
-    // defines number of constraints
-    nhc->h_nconstraints = object->nelements;
-
-    // create the parameters
-    nhc->h_mu     = (nhc->h_young_modulus) / (2. * (1 + nhc->h_poisson_ratio));
-    nhc->h_lambda = (nhc->h_young_modulus * nhc->h_poisson_ratio) / ((1 + nhc->h_poisson_ratio) * (1 - 2 * nhc->h_poisson_ratio));
-
-
-    nhc->h_v0 = (float*)malloc(object->nelements*sizeof (float));
-    nhc->h_DmInv = (float*)malloc(9*object->nelements*sizeof (float));
-
-    for ( int i = 0 ; i < object->nelements; i++)
-    {
-
-        int v1 = object->T(i,0);
-        int v2 = object->T(i,1);
-        int v3 = object->T(i,2);
-        int v4 = object->T(i,3);
-
-        auto const p1 = object->x.row(v1);
-        auto const p2 = object->x.row(v2);
-        auto const p3 = object->x.row(v3);
-        auto const p4 = object->x.row(v4);
-
-        Matrix3f Dm;
-        Dm.col(0) = (p1 - p4).transpose();
-        Dm.col(1) = (p2 - p4).transpose();
-        Dm.col(2) = (p3 - p4).transpose();
-
-        nhc->h_v0[i]     = (1. / 6.) * Dm.determinant();
-
-        auto dminv =  Dm.inverse();
-
-        nhc->h_DmInv[9*i + 0] = dminv(0,0);
-        nhc->h_DmInv[9*i + 1] = dminv(0,1);
-        nhc->h_DmInv[9*i + 2] = dminv(0,2);
-        nhc->h_DmInv[9*i + 3] = dminv(1,0);
-        nhc->h_DmInv[9*i + 4] = dminv(1,1);
-        nhc->h_DmInv[9*i + 5] = dminv(1,2);
-        nhc->h_DmInv[9*i + 6] = dminv(2,0);
-        nhc->h_DmInv[9*i + 7] = dminv(2,1);
-        nhc->h_DmInv[9*i + 8] = dminv(2,2);
-
+    std::map<std::pair<int, int>, std::vector<int>> edgemap;
+    int nfaces = object->nfaces;
+    for (int i = 0; i < nfaces; i++) {
+        for (int j = 0; j < 3; j++) {
+            int nextj = (j + 1) % 3;
+            int v1 = object->F(i, j);
+            int v2 = object->F(i, nextj);
+            if (v1 > v2)
+                std::swap(v1, v2);
+            edgemap[std::pair<int, int>(v1, v2)].push_back(i);
+        }
     }
-    nhc->computeGraph(object->T);
-    nhc->transferToGPU();
 
-}
-
-void simulator::initializeVolumeConstraint(float alpha,float beta)
-{
-    // creates neohookean constraint
-    vc = new VolumeConstraint;
-
-    // set values
-    vc->h_alpha = alpha;
-    vc->h_beta = beta;
-
-    // defines number of constraints
-    vc->h_nconstraints = object->nelements;
-
-    // allocates space
-    vc->h_v0 = (float*)malloc(object->nelements*sizeof (float));
-
-    for ( int i = 0 ; i < object->nelements; i++)
-    {
-
-        int v1 = object->T(i,0);
-        int v2 = object->T(i,1);
-        int v3 = object->T(i,2);
-        int v4 = object->T(i,3);
-
-        auto const p1 = object->x.row(v1);
-        auto const p2 = object->x.row(v2);
-        auto const p3 = object->x.row(v3);
-        auto const p4 = object->x.row(v4);
-
-        Matrix3f Dm;
-        Dm.col(0) = (p1 - p4).transpose();
-        Dm.col(1) = (p2 - p4).transpose();
-        Dm.col(2) = (p3 - p4).transpose();
-
-        vc->h_v0[i]     = abs((1. / 6.) * Dm.determinant());
-
+    int nhinges = 0;
+    for (auto it : edgemap) {
+        if (it.second.size() == 2)
+            nhinges++;
     }
-    vc->computeGraph(object->T);
-    vc->transferToGPU();
+    H_.resize(nhinges, 4);
+    int idx = 0;
+    for (auto it : edgemap) {
+        if (it.second.size() != 2)
+            continue;
+        std::set<int> hingeverts;
+        for (int j = 0; j < 3; j++) {
+            hingeverts.insert(object->F(it.second[0], j));
+            hingeverts.insert(object->F(it.second[1], j));
+        }
+        int colidx = 0;
+        for (auto v : hingeverts) {
+            H_(idx, colidx) = v;
+            colidx++;
+        }
+        idx++;
+    }
 
 }
 
@@ -392,12 +192,7 @@ void simulator::initializeFixedPointConstraint(void)
 
 }
 
-void NeohookeanConstraint::computeGraph(MatrixXi E)
-{
-
-}
-
-void VolumeConstraint::computeGraph(MatrixXi E)
+void BendingConstraint::computeGraph(MatrixXi E)
 {
 
     // graph algorithm
@@ -586,9 +381,6 @@ void VolumeConstraint::computeGraph(MatrixXi E)
     }
 
     this->h_graph = G.data();
-    this->maxcolor = maxcolor;
-    std::cout << "Volume Graph Colors: " << maxcolor << std::endl;
-    this->maxelem = maxpool;
 
 }
 
@@ -733,7 +525,7 @@ void EdgeConstraint::computeGraph(MatrixXi E)
 
     this->h_graph = G.data();
     this->maxcolor = maxcolor;
-    std::cout << "Edge" << std::endl;
+    std::cout << maxcolor << std::endl;
     this->maxelem = maxpool;
 
 }

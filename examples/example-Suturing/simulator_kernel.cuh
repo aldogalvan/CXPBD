@@ -849,7 +849,13 @@ __global__ void edgeConstraint(float dt, int d_n, float d_alpha, float d_beta,
 
 }
 
-__global__ void explicitEuler(Eigen::Vector3i d_tri, Eigen::Vector3f d_f, int d_n, float d_dt,
+__global__ void dynamicConstraint(float dt, int d_n, int* d_i,
+                                  float* d_p, float* d_p0, float* m, float* lagrange)
+{
+
+}
+
+__global__ void explicitEuler(int d_i, float* d_f, int d_n, float d_dt,
                               float* d_p, float* d_x, float* d_pdot, float* d_m )
 {
     int globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -858,32 +864,21 @@ __global__ void explicitEuler(Eigen::Vector3i d_tri, Eigen::Vector3f d_f, int d_
     if (globalIdx < d_n)
     {
         float a[3] = {0.,0.,0.};
-        int d_i0 = d_tri[0];
-        int d_i1 = d_tri[1];
-        int d_i2 = d_tri[2];
 
-        // apply force if in index
-        if (globalIdx == d_i0)
+
+        // apply force
+        /*
+        if ( globalIdx == d_i)
         {
-            a[0] += d_f[0] / d_m[d_i0];
-            a[1] += d_f[1] / d_m[d_i0];
-            a[2] += d_f[2] / d_m[d_i0];
+            a[0] += d_f[0] / d_m[globalIdx];
+            a[1] += d_f[1] / d_m[globalIdx];
+            a[2] += d_f[2] / d_m[globalIdx];
         }
-        if (globalIdx == d_i1)
-        {
-            a[0] += d_f[0] / d_m[d_i1];
-            a[1] += d_f[1] / d_m[d_i1];
-            a[2] += d_f[2] / d_m[d_i1];
-        }
-        if ( globalIdx == d_i2)
-        {
-            a[0] += d_f[0] / d_m[d_i2];
-            a[1] += d_f[1] / d_m[d_i2];
-            a[2] += d_f[2] / d_m[d_i2];
-        }
+         */
+
 
         // apply gravity
-        a[2] -= 9.81;
+        a[2] -= 9.81*100;
 
         // explicit euler
         float pdot_exp[3] = {0.,0.,0.};
