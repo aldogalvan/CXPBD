@@ -9,50 +9,50 @@
 struct object_type
 {
     // end triangle
-    float end[3][3];
+    double end[3][3];
 
     // start triangle
-    float start[3][3];
+    double start[3][3];
 
 };
 
 __host__ __device__ __forceinline__
-float accurateSqrt(float x)
+double accurateSqrt(double x)
 {
     return x * rsqrt(x);
 }
 
 __host__ __device__ __forceinline__
-void condSwap(bool c, float &X, float &Y)
+void condSwap(bool c, double &X, double &Y)
 {
     // used in step 2
-    float Z = X;
+    double Z = X;
     X = c ? Y : X;
     Y = c ? Z : Y;
 }
 
 __host__ __device__ __forceinline__
-void condNegSwap(bool c, float &X, float &Y)
+void condNegSwap(bool c, double &X, double &Y)
 {
     // used in step 2 and 3
-    float Z = -X;
+    double Z = -X;
     X = c ? Y : X;
     Y = c ? Z : Y;
 }
 
 // matrix multiplication M = A * B
 __host__ __device__ __forceinline__
-void multAB(float a11, float a12, float a13,
-            float a21, float a22, float a23,
-            float a31, float a32, float a33,
+void multAB(double a11, double a12, double a13,
+            double a21, double a22, double a23,
+            double a31, double a32, double a33,
         //
-            float b11, float b12, float b13,
-            float b21, float b22, float b23,
-            float b31, float b32, float b33,
+            double b11, double b12, double b13,
+            double b21, double b22, double b23,
+            double b31, double b32, double b33,
         //
-            float &m11, float &m12, float &m13,
-            float &m21, float &m22, float &m23,
-            float &m31, float &m32, float &m33)
+            double &m11, double &m12, double &m13,
+            double &m21, double &m22, double &m23,
+            double &m31, double &m32, double &m33)
 {
 
     m11=a11*b11 + a12*b21 + a13*b31; m12=a11*b12 + a12*b22 + a13*b32; m13=a11*b13 + a12*b23 + a13*b33;
@@ -62,17 +62,17 @@ void multAB(float a11, float a12, float a13,
 
 // matrix multiplication M = Transpose[A] * B
 __host__ __device__ __forceinline__
-void multAtB(float a11, float a12, float a13,
-             float a21, float a22, float a23,
-             float a31, float a32, float a33,
+void multAtB(double a11, double a12, double a13,
+             double a21, double a22, double a23,
+             double a31, double a32, double a33,
         //
-             float b11, float b12, float b13,
-             float b21, float b22, float b23,
-             float b31, float b32, float b33,
+             double b11, double b12, double b13,
+             double b21, double b22, double b23,
+             double b31, double b32, double b33,
         //
-             float &m11, float &m12, float &m13,
-             float &m21, float &m22, float &m23,
-             float &m31, float &m32, float &m33)
+             double &m11, double &m12, double &m13,
+             double &m21, double &m22, double &m23,
+             double &m31, double &m32, double &m33)
 {
     m11=a11*b11 + a21*b21 + a31*b31; m12=a11*b12 + a21*b22 + a31*b32; m13=a11*b13 + a21*b23 + a31*b33;
     m21=a12*b11 + a22*b21 + a32*b31; m22=a12*b12 + a22*b22 + a32*b32; m23=a12*b13 + a22*b23 + a32*b33;
@@ -80,26 +80,26 @@ void multAtB(float a11, float a12, float a13,
 }
 
 __host__ __device__ __forceinline__
-void quatToMat3(const float * qV,
-                float &m11, float &m12, float &m13,
-                float &m21, float &m22, float &m23,
-                float &m31, float &m32, float &m33
+void quatToMat3(const double * qV,
+                double &m11, double &m12, double &m13,
+                double &m21, double &m22, double &m23,
+                double &m31, double &m32, double &m33
 )
 {
-    float w = qV[3];
-    float x = qV[0];
-    float y = qV[1];
-    float z = qV[2];
+    double w = qV[3];
+    double x = qV[0];
+    double y = qV[1];
+    double z = qV[2];
 
-    float qxx = x*x;
-    float qyy = y*y;
-    float qzz = z*z;
-    float qxz = x*z;
-    float qxy = x*y;
-    float qyz = y*z;
-    float qwx = w*x;
-    float qwy = w*y;
-    float qwz = w*z;
+    double qxx = x*x;
+    double qyy = y*y;
+    double qzz = z*z;
+    double qxz = x*z;
+    double qxy = x*y;
+    double qyz = y*z;
+    double qwx = w*x;
+    double qwy = w*y;
+    double qwz = w*z;
 
     m11=1 - 2*(qyy + qzz); m12=2*(qxy - qwz); m13=2*(qxz + qwy);
     m21=2*(qxy + qwz); m22=1 - 2*(qxx + qzz); m23=2*(qyz - qwx);
@@ -107,7 +107,7 @@ void quatToMat3(const float * qV,
 }
 
 __host__ __device__ __forceinline__
-void approximateGivensQuaternion(float a11, float a12, float a22, float &ch, float &sh)
+void approximateGivensQuaternion(double a11, double a12, double a22, double &ch, double &sh)
 {
 /*
      * Given givens angle computed by approximateGivensAngles,
@@ -116,29 +116,29 @@ void approximateGivensQuaternion(float a11, float a12, float a22, float &ch, flo
     ch = 2*(a11-a22);
     sh = a12;
     bool b = _gamma*sh*sh < ch*ch;
-    float w = rsqrt(ch*ch+sh*sh);
+    double w = rsqrt(ch*ch+sh*sh);
     ch=b?w*ch:_cstar;
     sh=b?w*sh:_sstar;
 }
 
 __host__ __device__ __forceinline__
 void jacobiConjugation( const int x, const int y, const int z,
-                        float &s11,
-                        float &s21, float &s22,
-                        float &s31, float &s32, float &s33,
-                        float * qV)
+                        double &s11,
+                        double &s21, double &s22,
+                        double &s31, double &s32, double &s33,
+                        double * qV)
 {
-    float ch,sh;
+    double ch,sh;
     approximateGivensQuaternion(s11,s21,s22,ch,sh);
 
-    float scale = ch*ch+sh*sh;
-    float a = (ch*ch-sh*sh)/scale;
-    float b = (2*sh*ch)/scale;
+    double scale = ch*ch+sh*sh;
+    double a = (ch*ch-sh*sh)/scale;
+    double b = (2*sh*ch)/scale;
 
     // make temp copy of S
-    float _s11 = s11;
-    float _s21 = s21; float _s22 = s22;
-    float _s31 = s31; float _s32 = s32; float _s33 = s33;
+    double _s11 = s11;
+    double _s21 = s21; double _s22 = s22;
+    double _s31 = s31; double _s32 = s32; double _s33 = s33;
 
     // perform conjugation S = Q'*S*Q
     // Q already implicitly solved from a, b
@@ -147,7 +147,7 @@ void jacobiConjugation( const int x, const int y, const int z,
     s31 =a*_s31 + b*_s32;								s32=-b*_s31 + a*_s32; s33=_s33;
 
     // update cumulative rotation qV
-    float tmp[3];
+    double tmp[3];
     tmp[0]=qV[0]*sh;
     tmp[1]=qV[1]*sh;
     tmp[2]=qV[2]*sh;
@@ -176,7 +176,7 @@ void jacobiConjugation( const int x, const int y, const int z,
 }
 
 __host__ __device__ __forceinline__
-float dist2(float x, float y, float z)
+double dist2(double x, double y, double z)
 {
     return x*x+y*y+z*z;
 }
@@ -184,11 +184,11 @@ float dist2(float x, float y, float z)
 // finds transformation that diagonalizes a symmetric matrix
 __host__ __device__ __forceinline__
 void jacobiEigenanlysis( // symmetric matrix
-        float &s11,
-        float &s21, float &s22,
-        float &s31, float &s32, float &s33,
+        double &s11,
+        double &s21, double &s22,
+        double &s31, double &s32, double &s33,
         // quaternion representation of V
-        float * qV)
+        double * qV)
 {
     qV[3]=1; qV[0]=0;qV[1]=0;qV[2]=0; // follow same indexing convention as GLM
     for (int i=0;i<4;i++)
@@ -205,17 +205,17 @@ void jacobiEigenanlysis( // symmetric matrix
 
 __host__ __device__ __forceinline__
 void sortSingularValues(// matrix that we want to decompose
-        float &b11, float &b12, float &b13,
-        float &b21, float &b22, float &b23,
-        float &b31, float &b32, float &b33,
+        double &b11, double &b12, double &b13,
+        double &b21, double &b22, double &b23,
+        double &b31, double &b32, double &b33,
         // sort V simultaneously
-        float &v11, float &v12, float &v13,
-        float &v21, float &v22, float &v23,
-        float &v31, float &v32, float &v33)
+        double &v11, double &v12, double &v13,
+        double &v21, double &v22, double &v23,
+        double &v31, double &v32, double &v33)
 {
-    float rho1 = dist2(b11,b21,b31);
-    float rho2 = dist2(b12,b22,b32);
-    float rho3 = dist2(b13,b23,b33);
+    double rho1 = dist2(b11,b21,b31);
+    double rho2 = dist2(b12,b22,b32);
+    double rho3 = dist2(b13,b23,b33);
     bool c;
     c = rho1 < rho2;
     condNegSwap(c,b11,b12); condNegSwap(c,v11,v12);
@@ -234,38 +234,38 @@ void sortSingularValues(// matrix that we want to decompose
 }
 
 __host__ __device__ __forceinline__
-void QRGivensQuaternion(float a1, float a2, float &ch, float &sh)
+void QRGivensQuaternion(double a1, double a2, double &ch, double &sh)
 {
     // a1 = pivot point on diagonal
     // a2 = lower triangular entry we want to annihilate
-    float epsilon = EPSILON;
-    float rho = accurateSqrt(a1*a1 + a2*a2);
+    double epsilon = EPSILON;
+    double rho = accurateSqrt(a1*a1 + a2*a2);
 
     sh = rho > epsilon ? a2 : 0;
     ch = fabs(a1) + fmax(rho,epsilon);
     bool b = a1 < 0;
     condSwap(b,sh,ch);
-    float w = rsqrt(ch*ch+sh*sh);
+    double w = rsqrt(ch*ch+sh*sh);
     ch *= w;
     sh *= w;
 }
 
 __host__ __device__ __forceinline__
 void QRDecomposition(// matrix that we want to decompose
-        float b11, float b12, float b13,
-        float b21, float b22, float b23,
-        float b31, float b32, float b33,
+        double b11, double b12, double b13,
+        double b21, double b22, double b23,
+        double b31, double b32, double b33,
         // output Q
-        float &q11, float &q12, float &q13,
-        float &q21, float &q22, float &q23,
-        float &q31, float &q32, float &q33,
+        double &q11, double &q12, double &q13,
+        double &q21, double &q22, double &q23,
+        double &q31, double &q32, double &q33,
         // output R
-        float &r11, float &r12, float &r13,
-        float &r21, float &r22, float &r23,
-        float &r31, float &r32, float &r33)
+        double &r11, double &r12, double &r13,
+        double &r21, double &r22, double &r23,
+        double &r31, double &r32, double &r33)
 {
-    float ch1,sh1,ch2,sh2,ch3,sh3;
-    float a,b;
+    double ch1,sh1,ch2,sh2,ch3,sh3;
+    double a,b;
 
     // first givens rotation (ch,0,0,sh)
     QRGivensQuaternion(b11,b21,ch1,sh1);
@@ -295,12 +295,12 @@ void QRDecomposition(// matrix that we want to decompose
     r31=-b*b21+a*b31;    r32=-b*b22+a*b32;  r33=-b*b23+a*b33;
 
     // construct the cumulative rotation Q=Q1 * Q2 * Q3
-    // the number of floating point operations for three quaternion multiplications
+    // the number of doubleing point operations for three quaternion multiplications
     // is more or less comparable to the explicit form of the joined matrix.
     // certainly more memory-efficient!
-    float sh12=sh1*sh1;
-    float sh22=sh2*sh2;
-    float sh32=sh3*sh3;
+    double sh12=sh1*sh1;
+    double sh22=sh2*sh2;
+    double sh32=sh3*sh3;
 
     q11=(-1+2*sh12)*(-1+2*sh22);
     q12=4*ch2*ch3*(-1+2*sh12)*sh2*sh3+2*ch1*sh1*(-1+2*sh32);
@@ -315,24 +315,24 @@ void QRDecomposition(// matrix that we want to decompose
     q33=(-1+2*sh22)*(-1+2*sh32);
 }
 
-__host__ __device__ float det(Eigen::Matrix3f A)
+__host__ __device__ double det(Eigen::Matrix3d A)
 {
-    float r1 = A(0,0) * ((A(1,1) * A(2,2))
+    double r1 = A(0,0) * ((A(1,1) * A(2,2))
                     - (A(2,1) * A(1,2)));
 
-    float r2 = A(0,1) * ((A(1,0) * A(2,2))
+    double r2 = A(0,1) * ((A(1,0) * A(2,2))
                     - (A(2,0) * A(1,2)));
 
-    float r3 = A(0,2) * ((A(1,0) * A(2,1))
+    double r3 = A(0,2) * ((A(1,0) * A(2,1))
                     - (A(2,0) * A(1,1)));
 
     return (r1 - r2 + r3);
 }
 
-__host__ __device__ Eigen::Matrix3f inv(Eigen::Matrix3f A)
+__host__ __device__ Eigen::Matrix3d inv(Eigen::Matrix3d A)
 {
-    float d = det(A);
-    Eigen::Matrix3f A_inv;
+    double d = det(A);
+    Eigen::Matrix3d A_inv;
 
     A(0,0) = A(1,1)*A(2,2) - A(1,2)*A(2,1);
     A(0,1) = A(1,0)*A(2,2) - A(1,2)*A(2,0);
@@ -350,9 +350,9 @@ __host__ __device__ Eigen::Matrix3f inv(Eigen::Matrix3f A)
 
 }
 
-__host__ __device__ __forceinline__ Eigen::Matrix3f mul(Eigen::Matrix3f A, Eigen::Matrix3f B)
+__host__ __device__ __forceinline__ Eigen::Matrix3d mul(Eigen::Matrix3d A, Eigen::Matrix3d B)
 {
-    Eigen::Matrix3f ret;
+    Eigen::Matrix3d ret;
 
     for (int i = 0; i < 3; i++) {
         for (int k = 0; k < 3; k++) {
@@ -365,39 +365,39 @@ __host__ __device__ __forceinline__ Eigen::Matrix3f mul(Eigen::Matrix3f A, Eigen
 
 __host__ __device__ __forceinline__
 void svd(// input A
-        float a11, float a12, float a13,
-        float a21, float a22, float a23,
-        float a31, float a32, float a33,
+        double a11, double a12, double a13,
+        double a21, double a22, double a23,
+        double a31, double a32, double a33,
         // output U
-        float &u11, float &u12, float &u13,
-        float &u21, float &u22, float &u23,
-        float &u31, float &u32, float &u33,
+        double &u11, double &u12, double &u13,
+        double &u21, double &u22, double &u23,
+        double &u31, double &u32, double &u33,
         // output S
-        float &s11, float &s12, float &s13,
-        float &s21, float &s22, float &s23,
-        float &s31, float &s32, float &s33,
+        double &s11, double &s12, double &s13,
+        double &s21, double &s22, double &s23,
+        double &s31, double &s32, double &s33,
         // output V
-        float &v11, float &v12, float &v13,
-        float &v21, float &v22, float &v23,
-        float &v31, float &v32, float &v33)
+        double &v11, double &v12, double &v13,
+        double &v21, double &v22, double &v23,
+        double &v31, double &v32, double &v33)
 {
     // normal equations matrix
-    float ATA11, ATA12, ATA13;
-    float ATA21, ATA22, ATA23;
-    float ATA31, ATA32, ATA33;
+    double ATA11, ATA12, ATA13;
+    double ATA21, ATA22, ATA23;
+    double ATA31, ATA32, ATA33;
 
     multAtB(a11,a12,a13,a21,a22,a23,a31,a32,a33,
             a11,a12,a13,a21,a22,a23,a31,a32,a33,
             ATA11,ATA12,ATA13,ATA21,ATA22,ATA23,ATA31,ATA32,ATA33);
 
     // symmetric eigenalysis
-    float qV[4];
+    double qV[4];
     jacobiEigenanlysis( ATA11,ATA21,ATA22, ATA31,ATA32,ATA33,qV);
     quatToMat3(qV,v11,v12,v13,v21,v22,v23,v31,v32,v33);
 
-    float b11, b12, b13;
-    float b21, b22, b23;
-    float b31, b32, b33;
+    double b11, b12, b13;
+    double b21, b22, b23;
+    double b31, b32, b33;
     multAB(a11,a12,a13,a21,a22,a23,a31,a32,a33,
            v11,v12,v13,v21,v22,v23,v31,v32,v33,
            b11, b12, b13, b21, b22, b23, b31, b32, b33);
@@ -416,21 +416,21 @@ void svd(// input A
 /// polar decomposition can be reconstructed trivially from SVD result
 /// A = UP
 __host__ __device__ __forceinline__
-void pd(float a11, float a12, float a13,
-        float a21, float a22, float a23,
-        float a31, float a32, float a33,
+void pd(double a11, double a12, double a13,
+        double a21, double a22, double a23,
+        double a31, double a32, double a33,
         // output U
-        float &u11, float &u12, float &u13,
-        float &u21, float &u22, float &u23,
-        float &u31, float &u32, float &u33,
+        double &u11, double &u12, double &u13,
+        double &u21, double &u22, double &u23,
+        double &u31, double &u32, double &u33,
         // output P
-        float &p11, float &p12, float &p13,
-        float &p21, float &p22, float &p23,
-        float &p31, float &p32, float &p33)
+        double &p11, double &p12, double &p13,
+        double &p21, double &p22, double &p23,
+        double &p31, double &p32, double &p33)
 {
-    float w11, w12, w13, w21, w22, w23, w31, w32, w33;
-    float s11, s12, s13, s21, s22, s23, s31, s32, s33;
-    float v11, v12, v13, v21, v22, v23, v31, v32, v33;
+    double w11, w12, w13, w21, w22, w23, w31, w32, w33;
+    double s11, s12, s13, s21, s22, s23, s31, s32, s33;
+    double v11, v12, v13, v21, v22, v23, v31, v32, v33;
 
     svd(a11, a12, a13, a21, a22, a23, a31, a32, a33,
         w11, w12, w13, w21, w22, w23, w31, w32, w33,
@@ -438,7 +438,7 @@ void pd(float a11, float a12, float a13,
         v11, v12, v13, v21, v22, v23, v31, v32, v33);
 
     // P = VSV'
-    float t11, t12, t13, t21, t22, t23, t31, t32, t33;
+    double t11, t12, t13, t21, t22, t23, t31, t32, t33;
     multAB(v11, v12, v13, v21, v22, v23, v31, v32, v33,
            s11, s12, s13, s21, s22, s23, s31, s32, s33,
            t11, t12, t13, t21, t22, t23, t31, t32, t33);
@@ -453,11 +453,11 @@ void pd(float a11, float a12, float a13,
            u11, u12, u13, u21, u22, u23, u31, u32, u33);
 }
 
-__global__ void timestepSimulation(float d_dt, int d_n, float* d_v, float* d_a, float* d_x, float* d_p)
+__global__ void timestepSimulation(double d_dt, int d_n, double* d_v, double* d_a, double* d_x, double* d_p)
 {
     for (int i = 0; i < d_n; i++)
     {
-        float vexplicit[3] = {d_v[3*i + 0] + d_dt*d_a[3*i + 0],
+        double vexplicit[3] = {d_v[3*i + 0] + d_dt*d_a[3*i + 0],
                            d_v[3*i + 1] + d_dt*d_a[3*i + 1],
                            d_v[3*i + 2] + d_dt*d_a[3*i + 2]};
 
@@ -467,7 +467,7 @@ __global__ void timestepSimulation(float d_dt, int d_n, float* d_v, float* d_a, 
     }
 }
 
-__global__ void fixedPointConstraint(int d_n, int* d_i, float* d_p, float* d_p0)
+__global__ void fixedPointConstraint(int d_n, int* d_i, double* d_p, double* d_p0)
 {
 
 
@@ -483,9 +483,9 @@ __global__ void fixedPointConstraint(int d_n, int* d_i, float* d_p, float* d_p0)
 
 }
 
-__global__ void neohookeanConstraint(float dt, int d_n, float d_mu, float d_lambda, float d_alpha, float d_beta,
-                                     int* d_i, float* d_p, float* d_p0, float* d_DmInv, float* d_v0,
-                                     float* m, float* lagrange)
+__global__ void neohookeanConstraint(double dt, int d_n, double d_mu, double d_lambda, double d_alpha, double d_beta,
+                                     int* d_i, double* d_p, double* d_p0, double* d_DmInv, double* d_v0,
+                                     double* m, double* lagrange)
 {
 
 
@@ -501,10 +501,10 @@ __global__ void neohookeanConstraint(float dt, int d_n, float d_mu, float d_lamb
         //printf("%i,%i,%i,%i\n",v1,v2,v3,v4);
 
         // tested
-        float V0 = d_v0[i];
+        double V0 = d_v0[i];
 
         //tested
-        Eigen::Matrix3f DmInv;
+        Eigen::Matrix3d DmInv;
         DmInv << d_DmInv[9*i+0],d_DmInv[9*i+1],d_DmInv[9*i+2],
                 d_DmInv[9*i+3], d_DmInv[9*i+4], d_DmInv[9*i+5],
                 d_DmInv[9*i+6], d_DmInv[9*i+7], d_DmInv[9*i+8];
@@ -513,10 +513,10 @@ __global__ void neohookeanConstraint(float dt, int d_n, float d_mu, float d_lamb
         //       d_DmInv[9*i+3], d_DmInv[9*i+4], d_DmInv[9*i+5],
         //       d_DmInv[9*i+6], d_DmInv[9*i+7], d_DmInv[9*i+8]);
 
-        Eigen::Vector3f p1 = {d_p[3*v1+0],d_p[3*v1+1], d_p[3*v1+2]};
-        Eigen::Vector3f p2 = {d_p[3*v2+0],d_p[3*v2+1], d_p[3*v2+2]};
-        Eigen::Vector3f p3 = {d_p[3*v3+0],d_p[3*v3+1], d_p[3*v3+2]};
-        Eigen::Vector3f p4 = {d_p[3*v4+0],d_p[3*v4+1], d_p[3*v4+2]};
+        Eigen::Vector3d p1 = {d_p[3*v1+0],d_p[3*v1+1], d_p[3*v1+2]};
+        Eigen::Vector3d p2 = {d_p[3*v2+0],d_p[3*v2+1], d_p[3*v2+2]};
+        Eigen::Vector3d p3 = {d_p[3*v3+0],d_p[3*v3+1], d_p[3*v3+2]};
+        Eigen::Vector3d p4 = {d_p[3*v4+0],d_p[3*v4+1], d_p[3*v4+2]};
 
         //printf("%i,%i,%i\n",3*v1+0,3*v1+1, 3*v1+2);
         //printf("%i,%i,%i\n",3*v2+0,3*v2+1, 3*v2+2);
@@ -529,10 +529,10 @@ __global__ void neohookeanConstraint(float dt, int d_n, float d_mu, float d_lamb
         //printf("%f,%f,%f\n",d_p[3*v4+0],d_p[3*v4+1], d_p[3*v4+2]);
 
 
-        Eigen::Vector3f p1_0 = {d_p0[3*v1+0],d_p0[3*v1+1], d_p0[3*v1+2]};
-        Eigen::Vector3f p2_0 = {d_p0[3*v2+0],d_p0[3*v2+1], d_p0[3*v2+2]};
-        Eigen::Vector3f p3_0 = {d_p0[3*v3+0],d_p0[3*v3+1], d_p0[3*v3+2]};
-        Eigen::Vector3f p4_0 = {d_p0[3*v4+0],d_p0[3*v4+1], d_p0[3*v4+2]};
+        Eigen::Vector3d p1_0 = {d_p0[3*v1+0],d_p0[3*v1+1], d_p0[3*v1+2]};
+        Eigen::Vector3d p2_0 = {d_p0[3*v2+0],d_p0[3*v2+1], d_p0[3*v2+2]};
+        Eigen::Vector3d p3_0 = {d_p0[3*v3+0],d_p0[3*v3+1], d_p0[3*v3+2]};
+        Eigen::Vector3d p4_0 = {d_p0[3*v4+0],d_p0[3*v4+1], d_p0[3*v4+2]};
 
         p1 = p1_0;
         p2 = p2_0;
@@ -549,30 +549,30 @@ __global__ void neohookeanConstraint(float dt, int d_n, float d_mu, float d_lamb
         //printf("%f,%f,%f\n",d_p0[3*v3+0],d_p0[3*v3+1], d_p0[3*v3+2]);
         //printf("%f,%f,%f\n",d_p0[3*v4+0],d_p0[3*v4+1], d_p0[3*v4+2]);
 
-        float w1 = 1. / m[v1];
-        float w2 = 1. / m[v2];
-        float w3 = 1. / m[v3];
-        float w4 = 1. / m[v4];
+        double w1 = 1. / m[v1];
+        double w2 = 1. / m[v2];
+        double w3 = 1. / m[v3];
+        double w4 = 1. / m[v4];
 
-        Eigen::Matrix3f Ds;
+        Eigen::Matrix3d Ds;
         Ds.col(0) = (p1 - p4).transpose();
         Ds.col(1) = (p2 - p4).transpose();
         Ds.col(2) = (p3 - p4).transpose();
 
-        float Vsigned = (1. / 6.) * det(Ds);
+        double Vsigned = (1. / 6.) * det(Ds);
 
         bool is_V_positive = Vsigned >= 0 ;
 
         bool is_V0_positive = V0 >= 0;
         bool is_tet_inverted = (is_V_positive && !is_V0_positive) || (!is_V_positive && is_V0_positive);
 
-        Eigen::Matrix3f F = mul(Ds, DmInv);
+        Eigen::Matrix3d F = mul(Ds, DmInv);
         // printf("%f,%f,%f,",F(0,0),F(1,1),F(2,2));
-        Eigen::Matrix3f I = Eigen::Matrix3f::Identity();
+        Eigen::Matrix3d I = Eigen::Matrix3d::Identity();
 
-        float epsilon = 1e-20;
-        Eigen::Matrix3f Piola;
-        float psi{};
+        double epsilon = 1e-20;
+        Eigen::Matrix3d Piola;
+        double psi{};
 
         // TODO: Implement correct inversion handling described in
         // Irving, Geoffrey, Joseph Teran, and Ronald Fedkiw. "Invertible finite elements for robust
@@ -582,7 +582,7 @@ __global__ void neohookeanConstraint(float dt, int d_n, float d_mu, float d_lamb
         {
 
             // TODO: Get singular values
-        float U[3][3]; float S[3][3]; float V[3][3];
+        double U[3][3]; double S[3][3]; double V[3][3];
         svd(F(0,0),F(0,1),F(0,2),
              F(1,0),F(1,1),F(1,2),
              F(2,0),F(2,1),F(2,2),
@@ -596,19 +596,19 @@ __global__ void neohookeanConstraint(float dt, int d_n, float d_mu, float d_lamb
              V[1][0], V[1][1], V[1][2],
              V[2][0], V[2][1], V[2][2]);
 
-        Eigen::Vector3f Fsigma = {S[0][0],S[1][1],S[2][2]};
-        Eigen::Matrix3f Fhat;
+        Eigen::Vector3d Fsigma = {S[0][0],S[1][1],S[2][2]};
+        Eigen::Matrix3d Fhat;
         Fhat.setZero();
         Fhat(0, 0) = Fsigma(0);
         Fhat(1, 1) = Fsigma(1);
         Fhat(2, 2) = Fsigma(2);
 
-        Eigen::Matrix3f Umat;
+        Eigen::Matrix3d Umat;
         Umat << U[0][0],U[0][1],U[0][2],
                 U[1][0],U[1][1],U[1][2],
                 U[2][0],U[2][1],U[2][2];
 
-        Eigen::Matrix3f Vmat;
+        Eigen::Matrix3d Vmat;
         Vmat << V[0][0],V[0][1],V[0][2],
                 V[1][0],V[1][1],V[1][2],
                 V[2][0],V[2][1],V[2][2];
@@ -626,38 +626,38 @@ __global__ void neohookeanConstraint(float dt, int d_n, float d_mu, float d_lamb
         Umat.col(smallest_element_idx) = -Umat.col(smallest_element_idx);
 
         // stress reaches maximum at 58% compression
-        float constexpr min_singular_value = 0.577;
+        double constexpr min_singular_value = 0.577;
         Fhat(0, 0)                               = min(Fhat(0, 0), min_singular_value);
         Fhat(1, 1)                               = min(Fhat(1, 1), min_singular_value);
         Fhat(2, 2)                               = min(Fhat(2, 2), min_singular_value);
 
-        Eigen::Matrix3f const Fprime = Umat * Fhat * Vmat.transpose();
-        Eigen::Matrix3f const F2     = Fprime.transpose() * Fprime;
-        Eigen::Matrix3f const Finv   = inv(Fprime);
-        Eigen::Matrix3f const FinvT  = Finv.transpose();
-        float const I1         = F2.trace();
-        float const J          = det(Fprime);
+        Eigen::Matrix3d const Fprime = Umat * Fhat * Vmat.transpose();
+        Eigen::Matrix3d const F2     = Fprime.transpose() * Fprime;
+        Eigen::Matrix3d const Finv   = inv(Fprime);
+        Eigen::Matrix3d const FinvT  = Finv.transpose();
+        double const I1         = F2.trace();
+        double const J          = det(Fprime);
 
-        float const logJ = std::log(J);
+        double const logJ = std::log(J);
         // psi(I1, J) = (mu/2)*(I1 - 3) - mu*log(J) + (lambda/2)*log^2(J)
-        psi = static_cast<float>(0.5) * d_mu * (I1 - static_cast<float>(3.)) -
-              d_mu * logJ + static_cast<float>(0.5) * d_lambda * logJ * logJ;
+        psi = static_cast<double>(0.5) * d_mu * (I1 - static_cast<double>(3.)) -
+              d_mu * logJ + static_cast<double>(0.5) * d_lambda * logJ * logJ;
         // P(F) = mu*(F - mu*F^-T) + lambda*log(J)*F^-T
         Piola = d_mu * (Fprime - d_mu * FinvT) + d_lambda * logJ * FinvT;
     }
     else
     {
-        Eigen::Matrix3f const F2    = mul(F.transpose() ,F);
-        Eigen::Matrix3f const Finv  = inv(F);
-        Eigen::Matrix3f const FinvT = Finv.transpose();
-        float const I1        = F2.trace();
+        Eigen::Matrix3d const F2    = mul(F.transpose() ,F);
+        Eigen::Matrix3d const Finv  = inv(F);
+        Eigen::Matrix3d const FinvT = Finv.transpose();
+        double const I1        = F2.trace();
 
-        float const J         = det(F);
+        double const J         = det(F);
 
-        float const logJ = std::log(J);
+        double const logJ = std::log(J);
         // psi(I1, J) = (mu/2)*(I1 - 3) - mu*log(J) + (lambda/2)*log^2(J)
-        psi = static_cast<float>(0.5) * d_mu * (I1 - static_cast<float>(3.)) -
-              d_mu * logJ + static_cast<float>(0.5) * d_lambda * logJ * logJ;
+        psi = static_cast<double>(0.5) * d_mu * (I1 - static_cast<double>(3.)) -
+              d_mu * logJ + static_cast<double>(0.5) * d_lambda * logJ * logJ;
         // P(F) = mu*(F - mu*F^-T) + lambda*log(J)*F^-T
         Piola = d_mu * (F - d_mu * FinvT) + d_lambda * logJ * FinvT;
         // printf("%f,%f,%f,",Piola(0,0),Piola(1,1),Piola(2,2));
@@ -666,13 +666,13 @@ __global__ void neohookeanConstraint(float dt, int d_n, float d_mu, float d_lamb
 
         // H is the negative gradient of the elastic potential
         V0 = std::abs(V0);
-        Eigen::Matrix3f H = -V0 * mul(Piola , DmInv.transpose());
-        Eigen::Vector3f f1 = H.col(0);
-        Eigen::Vector3f f2 = H.col(1);
-        Eigen::Vector3f f3 = H.col(2);
-        Eigen::Vector3f f4 = -(f1 + f2 + f3);
+        Eigen::Matrix3d H = -V0 * mul(Piola , DmInv.transpose());
+        Eigen::Vector3d f1 = H.col(0);
+        Eigen::Vector3d f2 = H.col(1);
+        Eigen::Vector3d f3 = H.col(2);
+        Eigen::Vector3d f4 = -(f1 + f2 + f3);
 
-        float weighted_sum_of_gradients =
+        double weighted_sum_of_gradients =
                 w1 * f1.squaredNorm() +
                 w2 * f2.squaredNorm() +
                 w3 * f3.squaredNorm() +
@@ -681,12 +681,12 @@ __global__ void neohookeanConstraint(float dt, int d_n, float d_mu, float d_lamb
         if (weighted_sum_of_gradients < epsilon)
             continue;
 
-        float C = V0 * psi;
-        float alpha_tilde = d_alpha / (dt * dt);
-        float beta_tilde  = d_beta * dt * dt;
-        float gamma       = alpha_tilde * beta_tilde * dt;
+        double C = V0 * psi;
+        double alpha_tilde = d_alpha / (dt * dt);
+        double beta_tilde  = d_beta * dt * dt;
+        double gamma       = alpha_tilde * beta_tilde * dt;
 
-        float delta_lagrange =
+        double delta_lagrange =
                 -(C + alpha_tilde * lagrange[i]) / (weighted_sum_of_gradients + alpha_tilde);
 
         lagrange[i] += delta_lagrange;
@@ -711,9 +711,9 @@ __global__ void neohookeanConstraint(float dt, int d_n, float d_mu, float d_lamb
     }
 }
 
-__global__ void volumeConstraint(float dt, int d_n, float d_alpha, float d_beta,
-                                 int* d_i, float* d_p, float* d_p0, float* d_v0,
-                                 float* m, float* lagrange, int* d_graph, int color, int maxelem)
+__global__ void volumeConstraint(double dt, int d_n, double d_alpha, double d_beta,
+                                 int* d_i, double* d_p, double* d_p0, double* d_v0,
+                                 double* m, double* lagrange, int* d_graph, int color, int maxelem)
 {
 
     int globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -729,40 +729,40 @@ __global__ void volumeConstraint(float dt, int d_n, float d_alpha, float d_beta,
             int v3 = d_i[4 * i + 2];
             int v4 = d_i[4 * i + 3];
 
-            float V0 = d_v0[i];
+            double V0 = d_v0[i];
 
-            Eigen::Vector3f p1 = {d_p[3 * v1 + 0], d_p[3 * v1 + 1], d_p[3 * v1 + 2]};
-            Eigen::Vector3f p2 = {d_p[3 * v2 + 0], d_p[3 * v2 + 1], d_p[3 * v2 + 2]};
-            Eigen::Vector3f p3 = {d_p[3 * v3 + 0], d_p[3 * v3 + 1], d_p[3 * v3 + 2]};
-            Eigen::Vector3f p4 = {d_p[3 * v4 + 0], d_p[3 * v4 + 1], d_p[3 * v4 + 2]};
+            Eigen::Vector3d p1 = {d_p[3 * v1 + 0], d_p[3 * v1 + 1], d_p[3 * v1 + 2]};
+            Eigen::Vector3d p2 = {d_p[3 * v2 + 0], d_p[3 * v2 + 1], d_p[3 * v2 + 2]};
+            Eigen::Vector3d p3 = {d_p[3 * v3 + 0], d_p[3 * v3 + 1], d_p[3 * v3 + 2]};
+            Eigen::Vector3d p4 = {d_p[3 * v4 + 0], d_p[3 * v4 + 1], d_p[3 * v4 + 2]};
 
 
-            float w1 = 1. / m[v1];
-            float w2 = 1. / m[v2];
-            float w3 = 1. / m[v3];
-            float w4 = 1. / m[v4];
+            double w1 = 1. / m[v1];
+            double w2 = 1. / m[v2];
+            double w3 = 1. / m[v3];
+            double w4 = 1. / m[v4];
 
-            float v = (1. / 6.) * abs((p2 - p1).cross(p3 - p1).dot(p4 - p1));
+            double v = (1. / 6.) * abs((p2 - p1).cross(p3 - p1).dot(p4 - p1));
 
             auto const C = v - V0;
 
-            Eigen::RowVector3f const grad1 = (1. / 6.) * (p2 - p3).cross(p4 - p3);
-            Eigen::RowVector3f const grad2 = (1. / 6.) * (p3 - p1).cross(p4 - p1);
-            Eigen::RowVector3f const grad3 = (1. / 6.) * (p1 - p2).cross(p4 - p2);
-            Eigen::RowVector3f const grad4 = (1. / 6.) * (p2 - p1).cross(p3 - p1);
+            Eigen::RowVector3d const grad1 = (1. / 6.) * (p2 - p3).cross(p4 - p3);
+            Eigen::RowVector3d const grad2 = (1. / 6.) * (p3 - p1).cross(p4 - p1);
+            Eigen::RowVector3d const grad3 = (1. / 6.) * (p1 - p2).cross(p4 - p2);
+            Eigen::RowVector3d const grad4 = (1. / 6.) * (p2 - p1).cross(p3 - p1);
 
             auto const weighted_sum_of_gradients = w1 * grad1.squaredNorm() + w2 * grad2.squaredNorm() +
                                                    w3 * grad3.squaredNorm() + w4 * grad4.squaredNorm();
 
 
-            float const alpha_tilde = d_alpha / (dt * dt);
-            float const beta_tilde = d_beta * dt * dt;
-            float const gamma = (alpha_tilde * beta_tilde) / dt;
+            double const alpha_tilde = d_alpha / (dt * dt);
+            double const beta_tilde = d_beta * dt * dt;
+            double const gamma = (alpha_tilde * beta_tilde) / dt;
 
             if (abs(alpha_tilde + weighted_sum_of_gradients) < 1e-6)
                 return;
 
-            float const delta_lagrange =
+            double const delta_lagrange =
                     -(C + alpha_tilde * lagrange[i]) / (weighted_sum_of_gradients + alpha_tilde);
 
             lagrange[i] += delta_lagrange;
@@ -789,9 +789,9 @@ __global__ void volumeConstraint(float dt, int d_n, float d_alpha, float d_beta,
 
 }
 
-__global__ void edgeConstraint(float dt, int d_n, float d_alpha, float d_beta,
-                                  int* d_i, float* d_p, float* d_p0, float* d_e0,
-                                  float* m, float* lagrange, int* d_graph, int color, int maxelem)
+__global__ void edgeConstraint(double dt, int d_n, double d_alpha, double d_beta,
+                                  int* d_i, double* d_p, double* d_p0, double* d_e0,
+                                  double* m, double* lagrange, int* d_graph, int color, int maxelem)
 {
 
     int globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -805,16 +805,16 @@ __global__ void edgeConstraint(float dt, int d_n, float d_alpha, float d_beta,
             int v1 = d_i[2 * i + 0];
             int v2 = d_i[2 * i + 1];
 
-            float e0 = d_e0[i];
+            double e0 = d_e0[i];
 
 
-            Eigen::Vector3f p1 = {d_p[3 * v1 + 0], d_p[3 * v1 + 1], d_p[3 * v1 + 2]};
-            Eigen::Vector3f p2 = {d_p[3 * v2 + 0], d_p[3 * v2 + 1], d_p[3 * v2 + 2]};
+            Eigen::Vector3d p1 = {d_p[3 * v1 + 0], d_p[3 * v1 + 1], d_p[3 * v1 + 2]};
+            Eigen::Vector3d p2 = {d_p[3 * v2 + 0], d_p[3 * v2 + 1], d_p[3 * v2 + 2]};
 
-            float w1 = 1. / m[v1];
-            float w2 = 1. / m[v2];
+            double w1 = 1. / m[v1];
+            double w2 = 1. / m[v2];
 
-            float e = (p2 - p1).norm();
+            double e = (p2 - p1).norm();
 
             auto const C = e - e0;
 
@@ -829,7 +829,7 @@ __global__ void edgeConstraint(float dt, int d_n, float d_alpha, float d_beta,
             if (abs(alpha_tilde + weighted_sum_of_gradients) < 1e-6)
                 return;
 
-            float const delta_lagrange =
+            double const delta_lagrange =
                     -(C + alpha_tilde * lagrange[i]) / (weighted_sum_of_gradients + alpha_tilde);
 
             lagrange[i] += delta_lagrange;
@@ -849,15 +849,15 @@ __global__ void edgeConstraint(float dt, int d_n, float d_alpha, float d_beta,
 
 }
 
-__global__ void explicitEuler(Eigen::Vector3i d_tri, Eigen::Vector3f d_f, int d_n, float d_dt,
-                              float* d_p, float* d_x, float* d_pdot, float* d_m )
+__global__ void explicitEuler(Eigen::Vector3i d_tri, Eigen::Vector3d d_f, int d_n, double d_dt,
+                              double* d_p, double* d_x, double* d_pdot, double* d_m )
 {
     int globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
 
     if (globalIdx < d_n)
     {
-        float a[3] = {0.,0.,0.};
+        double a[3] = {0.,0.,0.};
         int d_i0 = d_tri[0];
         int d_i1 = d_tri[1];
         int d_i2 = d_tri[2];
@@ -886,7 +886,7 @@ __global__ void explicitEuler(Eigen::Vector3i d_tri, Eigen::Vector3f d_f, int d_
         a[2] -= 9.81;
 
         // explicit euler
-        float pdot_exp[3] = {0.,0.,0.};
+        double pdot_exp[3] = {0.,0.,0.};
         pdot_exp[0] = d_pdot[3*globalIdx + 0] + d_dt * a[0];
         pdot_exp[1] = d_pdot[3*globalIdx + 1] + d_dt * a[1];
         pdot_exp[2] = d_pdot[3*globalIdx + 2] + d_dt * a[2];
@@ -899,7 +899,7 @@ __global__ void explicitEuler(Eigen::Vector3i d_tri, Eigen::Vector3f d_f, int d_
 
 }
 
-__global__ void updateSolution(float d_dt, int d_n, float* d_xdot, float* d_x, float* d_xlast, float* d_p)
+__global__ void updateSolution(double d_dt, int d_n, double* d_xdot, double* d_x, double* d_xlast, double* d_p)
 {
     int globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -921,7 +921,7 @@ __global__ void updateSolution(float d_dt, int d_n, float* d_xdot, float* d_x, f
 
 }
 
-__global__ void computeNormals(const float* d_x, float* d_N0, float* d_N , int* d_F, int nfaces)
+__global__ void computeNormals(const double* d_x, double* d_N0, double* d_N , int* d_F, int nfaces)
 {
 
     int globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -951,7 +951,7 @@ __global__ void computeNormals(const float* d_x, float* d_N0, float* d_N , int* 
 
 
 /*
-__global__ void transform2objecttype(object_type* tris, int* f, float* start, float* end, int ntris)
+__global__ void transform2objecttype(object_type* tris, int* f, double* start, double* end, int ntris)
 {
     //int globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
 

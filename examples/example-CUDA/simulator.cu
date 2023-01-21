@@ -4,13 +4,13 @@
 
 
 // returns the position data of the faces
-Matrix<float,Dynamic,Dynamic,RowMajor> simulator::positions()
+Matrix<double,Dynamic,Dynamic,RowMajor> simulator::positions()
 {
 
-    float* temp;
-    temp = (float*)malloc(object->nvertices*3*sizeof (float));
-    cudaMemcpy(temp,object->d_x,3*object->nvertices*sizeof(float),cudaMemcpyDeviceToHost);
-    Matrix<float,Dynamic,Dynamic,RowMajor> ret(object->nvertices,3);
+    double* temp;
+    temp = (double*)malloc(object->nvertices*3*sizeof (double));
+    cudaMemcpy(temp,object->d_x,3*object->nvertices*sizeof(double),cudaMemcpyDeviceToHost);
+    Matrix<double,Dynamic,Dynamic,RowMajor> ret(object->nvertices,3);
     for (int i = 0; i < object->nvertices; i++)
     {
         ret(i,0) = temp[3*i+0];
@@ -32,23 +32,23 @@ void meshObject::transferToGPU(void)
     cudaMalloc((void**)&this->d_ti,this->nelements*4*sizeof(int));
     cudaMalloc((void**)&this->d_ei,this->nedges*2*sizeof(int));
     cudaMalloc((void**)&this->d_fi,this->nfaces*3*sizeof(int));
-    cudaMalloc((void**)&this->d_x,this->nvertices*3*sizeof(float));
-    cudaMalloc((void**)&this->d_xlast,this->nvertices*3*sizeof(float));
-    cudaMalloc((void**)&this->d_x0,this->nvertices*3*sizeof(float));
-    cudaMalloc((void**)&this->d_xdot,this->nvertices*3*sizeof(float));
-    cudaMalloc((void**)&this->d_N,this->nfaces*3*sizeof(float));
-    cudaMalloc((void**)&this->d_Nlast,this->nfaces*3*sizeof(float));
-    cudaMalloc((void**)&this->d_m,this->nvertices*sizeof(float));
+    cudaMalloc((void**)&this->d_x,this->nvertices*3*sizeof(double));
+    cudaMalloc((void**)&this->d_xlast,this->nvertices*3*sizeof(double));
+    cudaMalloc((void**)&this->d_x0,this->nvertices*3*sizeof(double));
+    cudaMalloc((void**)&this->d_xdot,this->nvertices*3*sizeof(double));
+    cudaMalloc((void**)&this->d_N,this->nfaces*3*sizeof(double));
+    cudaMalloc((void**)&this->d_Nlast,this->nfaces*3*sizeof(double));
+    cudaMalloc((void**)&this->d_m,this->nvertices*sizeof(double));
 
 
     cudaMemcpy(this->d_ti,this->h_ti,4*this->nelements*sizeof(int),cudaMemcpyHostToDevice);
     cudaMemcpy(this->d_ei,this->h_ei,2*this->nedges*sizeof(int),cudaMemcpyHostToDevice);
     cudaMemcpy(this->d_fi,this->h_fi,3*this->nfaces*sizeof(int),cudaMemcpyHostToDevice);
-    cudaMemcpy(this->d_x,this->h_x,3*this->nvertices*sizeof(float),cudaMemcpyHostToDevice);
-    cudaMemcpy(this->d_xlast,this->h_x,3*this->nvertices*sizeof(float),cudaMemcpyHostToDevice);
-    cudaMemcpy(this->d_x0,this->h_x0,3*this->nvertices*sizeof(float),cudaMemcpyHostToDevice);
-    cudaMemcpy(this->d_xdot,this->h_xdot,3*this->nvertices*sizeof(float),cudaMemcpyHostToDevice);
-    cudaMemcpy(this->d_m,this->h_m,this->nvertices*sizeof(float),cudaMemcpyHostToDevice);
+    cudaMemcpy(this->d_x,this->h_x,3*this->nvertices*sizeof(double),cudaMemcpyHostToDevice);
+    cudaMemcpy(this->d_xlast,this->h_x,3*this->nvertices*sizeof(double),cudaMemcpyHostToDevice);
+    cudaMemcpy(this->d_x0,this->h_x0,3*this->nvertices*sizeof(double),cudaMemcpyHostToDevice);
+    cudaMemcpy(this->d_xdot,this->h_xdot,3*this->nvertices*sizeof(double),cudaMemcpyHostToDevice);
+    cudaMemcpy(this->d_m,this->h_m,this->nvertices*sizeof(double),cudaMemcpyHostToDevice);
 }
 
 void NeohookeanConstraint::transferToGPU()
@@ -57,14 +57,14 @@ void NeohookeanConstraint::transferToGPU()
     d_mu = h_mu; d_lambda = h_lambda; d_alpha = h_alpha; d_beta = h_beta;
 
     //allocate memory
-    cudaMalloc((void**)&this->d_DmInv,9*this->h_nconstraints*sizeof(float));
-    cudaMalloc((void**)&this->d_v0,this->h_nconstraints*sizeof(float));
-    cudaMalloc((void**)&this->d_lagrange,this->h_nconstraints*sizeof(float));
+    cudaMalloc((void**)&this->d_DmInv,9*this->h_nconstraints*sizeof(double));
+    cudaMalloc((void**)&this->d_v0,this->h_nconstraints*sizeof(double));
+    cudaMalloc((void**)&this->d_lagrange,this->h_nconstraints*sizeof(double));
 
 
     // copy to device
-    cudaMemcpy(this->d_DmInv,this->h_DmInv,9*this->h_nconstraints*sizeof(float),cudaMemcpyHostToDevice);
-    cudaMemcpy(this->d_v0,this->h_v0,this->h_nconstraints*sizeof(float),cudaMemcpyHostToDevice);
+    cudaMemcpy(this->d_DmInv,this->h_DmInv,9*this->h_nconstraints*sizeof(double),cudaMemcpyHostToDevice);
+    cudaMemcpy(this->d_v0,this->h_v0,this->h_nconstraints*sizeof(double),cudaMemcpyHostToDevice);
 }
 
 void VolumeConstraint::transferToGPU()
@@ -73,12 +73,12 @@ void VolumeConstraint::transferToGPU()
     d_alpha = h_alpha; d_beta = h_beta;
 
     //allocate memory
-    cudaMalloc((void**)&this->d_v0,this->h_nconstraints*sizeof(float));
-    cudaMalloc((void**)&this->d_lagrange,this->h_nconstraints*sizeof(float));
+    cudaMalloc((void**)&this->d_v0,this->h_nconstraints*sizeof(double));
+    cudaMalloc((void**)&this->d_lagrange,this->h_nconstraints*sizeof(double));
     cudaMalloc((void**)&this->d_graph,this->maxcolor*this->maxelem*sizeof(int));
 
     // copy to device
-    cudaMemcpy(this->d_v0,this->h_v0,this->h_nconstraints*sizeof(float),cudaMemcpyHostToDevice);
+    cudaMemcpy(this->d_v0,this->h_v0,this->h_nconstraints*sizeof(double),cudaMemcpyHostToDevice);
     cudaMemcpy(this->d_graph,this->h_graph,this->maxcolor*this->maxelem*sizeof(int),cudaMemcpyHostToDevice);
 }
 
@@ -89,12 +89,12 @@ void EdgeConstraint::transferToGPU()
     d_alpha = h_alpha; d_beta = h_beta;
 
     //allocate memory
-    cudaMalloc((void**)&this->d_e0,this->h_nconstraints*sizeof(float));
-    cudaMalloc((void**)&this->d_lagrange,this->h_nconstraints*sizeof(float));
+    cudaMalloc((void**)&this->d_e0,this->h_nconstraints*sizeof(double));
+    cudaMalloc((void**)&this->d_lagrange,this->h_nconstraints*sizeof(double));
     cudaMalloc((void**)&this->d_graph,this->maxcolor*this->maxelem*sizeof(int));
 
     // copy to device
-    cudaMemcpy(this->d_e0,this->h_e0,this->h_nconstraints*sizeof(float),cudaMemcpyHostToDevice);
+    cudaMemcpy(this->d_e0,this->h_e0,this->h_nconstraints*sizeof(double),cudaMemcpyHostToDevice);
     cudaMemcpy(this->d_graph,this->h_graph,this->maxcolor*this->maxelem*sizeof(int),cudaMemcpyHostToDevice);
 }
 
@@ -102,7 +102,7 @@ void FixedPointConstraint::transferToGPU()
 {
     //allocate memory
     cudaMalloc((void**)&this->d_i,this->h_nconstraints*sizeof(int));
-    cudaMalloc((void**)&this->d_lagrange,this->h_nconstraints*sizeof(float));
+    cudaMalloc((void**)&this->d_lagrange,this->h_nconstraints*sizeof(double));
 
     // copy to device
     cudaMemcpy(this->d_i,this->h_i,this->h_nconstraints*sizeof(int),cudaMemcpyHostToDevice);
@@ -117,10 +117,10 @@ void meshObject::computeNormals(void)
 
 void simulator::allocMemory(void)
 {
-    cudaMalloc((void**)&d_p,object->nvertices*3*sizeof(float));;
+    cudaMalloc((void**)&d_p,object->nvertices*3*sizeof(double));;
 }
 
-void simulator::computeNeohookeanConstraint(float* d_p)
+void simulator::computeNeohookeanConstraint(double* d_p)
 {
 
     neohookeanConstraint<<<1,1024>>>(d_dt,nhc->h_nconstraints,nhc->d_mu,nhc->d_lambda,
@@ -130,7 +130,7 @@ void simulator::computeNeohookeanConstraint(float* d_p)
 
 }
 
-void simulator::computeEdgeConstraint(float* d_p)
+void simulator::computeEdgeConstraint(double* d_p)
 {
     for (int c = 0; c < ec->maxcolor; c++)
     {
@@ -140,7 +140,7 @@ void simulator::computeEdgeConstraint(float* d_p)
     cudaDeviceSynchronize();
 }
 
-void simulator::computeVolumeConstraint(float* d_p)
+void simulator::computeVolumeConstraint(double* d_p)
 {
 
     for (int c = 0; c < vc->maxcolor; c++)
@@ -152,7 +152,7 @@ void simulator::computeVolumeConstraint(float* d_p)
     cudaDeviceSynchronize();
 }
 
-void simulator::computeFixedPointConstraint(float* d_p)
+void simulator::computeFixedPointConstraint(double* d_p)
 {
 
     fixedPointConstraint<<<4,1024>>>(fpc->h_nconstraints,fpc->d_i,d_p,object->d_x0);
@@ -171,7 +171,7 @@ void simulator::computeCollisionConstraints(vector<ColInfo*>& col_info)
     auto collision = col_info[0];
     auto normal = collision->normal[1];
     Vector3f pos = Vector3f(tool->pos[0],tool->pos[1],tool->pos[2]);
-    float k = tool->k_proxy;
+    double k = tool->k_proxy;
     auto triangle = collision->end;
     auto a = triangle[0];
     auto b = triangle[1];
@@ -179,7 +179,7 @@ void simulator::computeCollisionConstraints(vector<ColInfo*>& col_info)
     Vector3d ret = closestPointOnTriangle(triangle,pos.cast<double>());
 
     // cout << (pos.cast<double>() - ret).norm() << endl;
-    float distance = (pos.cast<double>() - ret).norm();
+    double distance = (pos.cast<double>() - ret).norm();
     if ( distance < tool->tool_radius)
     {
         if ((pos.cast<double>() - a).dot(normal) > 0)
@@ -251,7 +251,7 @@ void simulator::computeCollisionConstraints(vector<ColInfo*>& col_info)
 
     // move it a bit in the normal direction
     proxy_temp += ep*normal_end;
-    proxy[0] = (float)proxy_temp[0]; proxy[1] = (float)proxy_temp[1]; proxy[2] = (float)proxy_temp[2];
+    proxy[0] = (double)proxy_temp[0]; proxy[1] = (double)proxy_temp[1]; proxy[2] = (double)proxy_temp[2];
 
     // do case where the object collides with the proxy
     //*************************************************
@@ -269,8 +269,10 @@ void simulator::computeCollisionConstraints(vector<ColInfo*>& col_info)
 void simulator::updateDynamics(double dt)
 {
     int idx = 100;
-    Vector3i i(object->h_fi[3*idx+0],object->h_fi[3*idx+1],object->h_fi[3*idx+2]);
-    Vector3f f(0,0,0.5);
+    Vector3i i;
+    if (idx != -1)
+        i = Vector3i(object->h_fi[3*idx+0],object->h_fi[3*idx+1],object->h_fi[3*idx+2]);
+    Vector3d f(0,0,0);
 
     // first we timestep using explicit euler
     explicitEuler<<<4,1024>>>(i, f, object->d_nx, d_dt,

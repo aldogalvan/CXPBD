@@ -132,7 +132,7 @@ double toolRadius;
 cVector3d force(0,0,0);
 
 // scalong
-float wss = 5;
+double wss = 5;
 
 //------------------------------------------------------------------------------
 // DECLARED FUNCTIONS
@@ -351,10 +351,10 @@ int main(int argc, char* argv[])
     toolRadius = 0.025;
 
     // define the proxy stiffness
-    float k_stiffness = 100;
+    double k_stiffness = 100;
 
     // defione the proxy damping
-    float b_damping = 1;
+    double b_damping = 1;
 
     // creates a tool object
     tool_sim = new toolObject(toolRadius,k_stiffness,b_damping);
@@ -371,7 +371,7 @@ int main(int argc, char* argv[])
     auto f = sim->triangles();
     for (int pi = 0 ; pi < p.rows();pi++)
     {
-        simvis->newVertex((float)p(pi,0),(float)p(pi,1),(float)p(pi,2));
+        simvis->newVertex(p(pi,0),p(pi,1),p(pi,2));
     }
 
     for (int fi = 0 ; fi < f.rows();fi++)
@@ -673,9 +673,9 @@ void updateHaptics(void)
 
     // get initial position
     hapticDevice->getPosition(pos);
-    tool_sim->pos[0] = (float)pos(0); tool_sim->pos[1] = (float)pos(1); tool_sim->pos[2] = (float)pos(2);
-    tool_sim->last_pos[0] = (float)pos(0); tool_sim->last_pos[1] = (float)pos(1); tool_sim->last_pos[2] = (float)pos(2);
-    tool_sim->proxy_pos[0] = (float)pos(0); tool_sim->proxy_pos[1] = (float)pos(1); tool_sim->proxy_pos[2] = (float)pos(2);
+    tool_sim->pos[0] = (double)pos(0); tool_sim->pos[1] = (double)pos(1); tool_sim->pos[2] = (double)pos(2);
+    tool_sim->last_pos[0] = (double)pos(0); tool_sim->last_pos[1] = (double)pos(1); tool_sim->last_pos[2] = (double)pos(2);
+    tool_sim->proxy_pos[0] = (double)pos(0); tool_sim->proxy_pos[1] = (double)pos(1); tool_sim->proxy_pos[2] = (double)pos(2);
 
     // get the rotation
     hapticDevice->getRotation(theta);
@@ -713,7 +713,7 @@ void updateHaptics(void)
         hapticDevice->getRotation(theta);
 
         // command a force and update the dynamics
-        float* force;
+        double* force;
         sim->updateDynamics(dt);
 
         // sets the force equal zero

@@ -25,8 +25,8 @@ struct ColInfo
 
 struct aabb
 {
-    float upper[3];
-    float lower[3];
+    double upper[3];
+    double lower[3];
 };
 
 // this function find the collisions

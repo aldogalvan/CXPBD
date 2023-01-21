@@ -79,12 +79,12 @@ void minimumColors(int N, int E,
     std::cout << minColor << std::endl;
 }
 
-void meshObject::createTetrahedralMesh(float scale)
+void meshObject::createTetrahedralMesh(double scale)
 {
     tetgenio input;
 
     // TetGen switches
-    char TETGEN_SWITCHES[] = "pq1.414a0.0001";
+    char TETGEN_SWITCHES[] = "pq1.414a0.0002";
 
     if (input.load_off("/home/agalvan-admin/CLionProjects/CUDAIsFun/resources/cylinder.off")) {
         // use TetGen to tetrahedralize our mesh
@@ -92,12 +92,12 @@ void meshObject::createTetrahedralMesh(float scale)
         tetrahedralize(TETGEN_SWITCHES, &input, &output);
 
         this->nvertices = output.numberofpoints;
-        Matrix<float,Dynamic,Dynamic,RowMajor> points(output.numberofpoints, 3);
+        Matrix<double,Dynamic,Dynamic,RowMajor> points(output.numberofpoints, 3);
 
         // create a vertex in the object for each point of the result
         for (int p = 0, pi = 0; p < output.numberofpoints; ++p, pi += 3)
         {
-            points.row(p) = RowVector3f(output.pointlist[pi + 0],
+            points.row(p) = RowVector3d(output.pointlist[pi + 0],
                                                output.pointlist[pi + 1],
                                                output.pointlist[pi + 2]);
         }
@@ -219,17 +219,17 @@ void meshObject::createTetrahedralMesh(float scale)
         this->h_fi = this->F.data();
 
         // create mass array
-        this->h_m =  (float*)malloc(this->nvertices*sizeof (float));
+        this->h_m =  (double*)malloc(this->nvertices*sizeof (double));
         for (int i = 0; i < this->nvertices; i++)
         {
-            this->h_m[i] = 1e-5;
+            this->h_m[i] = 1e-6;
         }
     }
 }
 
 
 
-void simulator::initializeNeoHookeanConstraint(float alpha, float beta)
+void simulator::initializeNeoHookeanConstraint(double alpha, double beta)
 {
     // creates neohookean constraint
     nhc = new NeohookeanConstraint;
@@ -246,8 +246,8 @@ void simulator::initializeNeoHookeanConstraint(float alpha, float beta)
     nhc->h_lambda = (nhc->h_young_modulus * nhc->h_poisson_ratio) / ((1 + nhc->h_poisson_ratio) * (1 - 2 * nhc->h_poisson_ratio));
 
 
-    nhc->h_v0 = (float*)malloc(object->nelements*sizeof (float));
-    nhc->h_DmInv = (float*)malloc(9*object->nelements*sizeof (float));
+    nhc->h_v0 = (double*)malloc(object->nelements*sizeof (double));
+    nhc->h_DmInv = (double*)malloc(9*object->nelements*sizeof (double));
 
     for ( int i = 0 ; i < object->nelements; i++)
     {
@@ -262,7 +262,7 @@ void simulator::initializeNeoHookeanConstraint(float alpha, float beta)
         auto const p3 = object->x.row(v3);
         auto const p4 = object->x.row(v4);
 
-        Matrix3f Dm;
+        Matrix3d Dm;
         Dm.col(0) = (p1 - p4).transpose();
         Dm.col(1) = (p2 - p4).transpose();
         Dm.col(2) = (p3 - p4).transpose();
@@ -287,7 +287,7 @@ void simulator::initializeNeoHookeanConstraint(float alpha, float beta)
 
 }
 
-void simulator::initializeVolumeConstraint(float alpha,float beta)
+void simulator::initializeVolumeConstraint(double alpha,double beta)
 {
     // creates neohookean constraint
     vc = new VolumeConstraint;
@@ -300,7 +300,7 @@ void simulator::initializeVolumeConstraint(float alpha,float beta)
     vc->h_nconstraints = object->nelements;
 
     // allocates space
-    vc->h_v0 = (float*)malloc(object->nelements*sizeof (float));
+    vc->h_v0 = (double*)malloc(object->nelements*sizeof (double));
 
     for ( int i = 0 ; i < object->nelements; i++)
     {
@@ -315,7 +315,7 @@ void simulator::initializeVolumeConstraint(float alpha,float beta)
         auto const p3 = object->x.row(v3);
         auto const p4 = object->x.row(v4);
 
-        Matrix3f Dm;
+        Matrix3d Dm;
         Dm.col(0) = (p1 - p4).transpose();
         Dm.col(1) = (p2 - p4).transpose();
         Dm.col(2) = (p3 - p4).transpose();
@@ -328,7 +328,7 @@ void simulator::initializeVolumeConstraint(float alpha,float beta)
 
 }
 
-void simulator::initializeEdgeConstraint(float alpha, float beta)
+void simulator::initializeEdgeConstraint(double alpha, double beta)
 {
     ec = new EdgeConstraint;
 
@@ -340,7 +340,7 @@ void simulator::initializeEdgeConstraint(float alpha, float beta)
     ec->h_nconstraints = object->nedges;
 
     // allocates space
-    ec->h_e0 = (float*)malloc(object->nedges*sizeof (float));
+    ec->h_e0 = (double*)malloc(object->nedges*sizeof (double));
 
     for ( int i = 0 ; i < object->nedges; i++)
     {
@@ -362,8 +362,8 @@ void simulator::initializeFixedPointConstraint(void)
 {
     fpc = new FixedPointConstraint;
 
-    float zmin = numeric_limits<float>::max();
-    float ep = 1e-3;
+    double zmin = numeric_limits<double>::max();
+    double ep = 1e-3;
 
     // find minimum
     for (int i = 0; i < object->x.rows(); i++)

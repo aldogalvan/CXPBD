@@ -12,7 +12,7 @@ struct ColInfo;
 
 struct toolObject
 {
-    toolObject(float tool_radius_, float k_proxy_, float b_proxy_) :
+    toolObject(double tool_radius_, double k_proxy_, double b_proxy_) :
         tool_radius(tool_radius_), k_proxy(k_proxy_), b_proxy(b_proxy_)
     {
         force[0] = 0; force[1] = 0; force[2] = 0;
@@ -23,16 +23,16 @@ struct toolObject
 
     }
 
-    float pos[3];
-    float last_pos[3];
-    float proxy_pos[3];
-    float force[3];
-    float tool_radius;
-    float k_proxy;
-    float b_proxy;
+    double pos[3];
+    double last_pos[3];
+    double proxy_pos[3];
+    double force[3];
+    double tool_radius;
+    double k_proxy;
+    double b_proxy;
 
     // force and index
-    float force_mesh[3];
+    double force_mesh[3];
     int index;
 };
 
@@ -60,17 +60,17 @@ struct meshObject
     void freeGPU(void);
 
     // this function creates the mesh object
-    void createTetrahedralMesh(float scale);
+    void createTetrahedralMesh(double scale);
 
     // this function computes the normals in a parallel fashion
     void computeNormals(void);
 
     // host data pointers
-    float* h_x; float* h_xlast; float* h_x0; float* h_xdot; float* h_m; int* h_ti; int* h_ei;
+    double* h_x; double* h_xlast; double* h_x0; double* h_xdot; double* h_m; int* h_ti; int* h_ei;
 
     // device data pointers
-    int d_nx; float* d_x; float* d_xlast; float* d_x0; float* d_Nlast; float* d_N;
-    float* d_xdot; int* d_ti; float* d_m; int d_ne; int* d_ei;
+    int d_nx; double* d_x; double* d_xlast; double* d_x0; double* d_Nlast; double* d_N;
+    double* d_xdot; int* d_ti; double* d_m; int d_ne; int* d_ei;
 
     // vis stuff
     int* h_fi; int* d_fi;
@@ -82,9 +82,9 @@ struct meshObject
     int nedges;
 
     // elements in eigen form
-    Matrix<float,Dynamic,Dynamic,RowMajor> x;
-    Matrix<float,Dynamic,Dynamic,RowMajor> xlast;
-    Matrix<float,Dynamic,Dynamic,RowMajor> xdot;
+    Matrix<double,Dynamic,Dynamic,RowMajor> x;
+    Matrix<double,Dynamic,Dynamic,RowMajor> xlast;
+    Matrix<double,Dynamic,Dynamic,RowMajor> xdot;
     Matrix<int,Dynamic,Dynamic,RowMajor> F;
     Matrix<int,Dynamic,Dynamic,RowMajor> T;
     Matrix<int,Dynamic,Dynamic,RowMajor> E;
@@ -108,12 +108,12 @@ struct NeohookeanConstraint
     int* d_graph;
 
     // values for neohookean constraint
-    float h_young_modulus = 1000000; float h_poisson_ratio = 0.49; float h_mu; float h_lambda;
-    float h_alpha; float h_beta; float* h_DmInv; float* h_v0;
+    double h_young_modulus = 1000000; double h_poisson_ratio = 0.49; double h_mu; double h_lambda;
+    double h_alpha; double h_beta; double* h_DmInv; double* h_v0;
 
     // define device variables
-    float d_young_modulus; float d_poisson_ratio; float d_mu; float d_lambda;
-    float d_alpha; float d_beta; float* d_DmInv; float* d_v0; float* d_lagrange;
+    double d_young_modulus; double d_poisson_ratio; double d_mu; double d_lambda;
+    double d_alpha; double d_beta; double* d_DmInv; double* d_v0; double* d_lagrange;
 
 };
 
@@ -136,10 +136,10 @@ struct VolumeConstraint
     int maxelem;
 
     // values for neohookean constraint
-    float h_alpha; float h_beta; float* h_v0;
+    double h_alpha; double h_beta; double* h_v0;
 
-    // define device variablesfloat d_young_modulus; float d_poisson_ratio; float d_mu; float d_lambda;
-    float d_alpha; float d_beta; float* d_v0; float* d_lagrange;
+    // define device variablesdouble d_young_modulus; double d_poisson_ratio; double d_mu; double d_lambda;
+    double d_alpha; double d_beta; double* d_v0; double* d_lagrange;
 };
 
 struct EdgeConstraint
@@ -161,10 +161,10 @@ struct EdgeConstraint
     int maxelem;
 
     // values for neohookean constraint
-    float h_alpha; float h_beta; float* h_e0;
+    double h_alpha; double h_beta; double* h_e0;
 
-    // define device variablesfloat d_young_modulus; float d_poisson_ratio; float d_mu; float d_lambda;
-    float d_alpha; float d_beta; float* d_e0; float* d_lagrange;
+    // define device variablesdouble d_young_modulus; double d_poisson_ratio; double d_mu; double d_lambda;
+    double d_alpha; double d_beta; double* d_e0; double* d_lagrange;
 };
 
 struct FixedPointConstraint
@@ -180,7 +180,7 @@ struct FixedPointConstraint
     int* h_i;
 
     // device variables
-    int* d_i; float* d_lagrange;
+    int* d_i; double* d_lagrange;
 };
 
 
@@ -214,35 +214,35 @@ public:
 
     // this function returns a pointer containing current position data of
     //  the object
-    Matrix<float,Dynamic,Dynamic,RowMajor> positions();
+    Matrix<double,Dynamic,Dynamic,RowMajor> positions();
     MatrixXi triangles(){return object->F;};
 
     // this funciton allocates memory to the fpu
     void allocMemory(void);
 
     // this function initializes a neoHookean constraint
-    void initializeNeoHookeanConstraint(float alpha, float beta);
+    void initializeNeoHookeanConstraint(double alpha, double beta);
 
     // this function initializes a volume constraint
-    void initializeVolumeConstraint(float alpha, float beta);
+    void initializeVolumeConstraint(double alpha, double beta);
 
     // this funciton innitializes a edge length constraint
-    void initializeEdgeConstraint(float alpha, float beta);
+    void initializeEdgeConstraint(double alpha, double beta);
 
     // this function initializes a fixed point constraint
     void initializeFixedPointConstraint(void);
 
     // this function computes a neohookean constraint
-    void computeNeohookeanConstraint(float* d_p);
+    void computeNeohookeanConstraint(double* d_p);
 
     // this function computes the volume constraint
-    void computeVolumeConstraint(float* d_p);
+    void computeVolumeConstraint(double* d_p);
 
     // this function computes an edge constraint
-    void computeEdgeConstraint(float* d_p);
+    void computeEdgeConstraint(double* d_p);
 
     // this function computes a fixed point constraint
-    void computeFixedPointConstraint(float* d_p);
+    void computeFixedPointConstraint(double* d_p);
 
     // this function computes collision constraint solving
     // including collision detection
@@ -278,11 +278,11 @@ public:
     VolumeConstraint* vc;
 
     // timestep (set 0.001 as default)
-    float h_dt = 0.001;
-    float d_dt = 0.001;
+    double h_dt = 0.001;
+    double d_dt = 0.001;
 
     // sim variable
-    float* d_p;
+    double* d_p;
 
 };
 

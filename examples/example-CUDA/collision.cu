@@ -16,100 +16,100 @@ Vector3d closestPointOnTriangle( const Vector3d *triangle, const Vector3d &sourc
     Vector3d edge1 = triangle[2] - triangle[0];
     Vector3d v0 = triangle[0] - sourcePosition;
 
-    float a = edge0.dot( edge0 );
-    float b = edge0.dot( edge1 );
-    float c = edge1.dot( edge1 );
-    float d = edge0.dot( v0 );
-    float e = edge1.dot( v0 );
+    double a = edge0.dot( edge0 );
+    double b = edge0.dot( edge1 );
+    double c = edge1.dot( edge1 );
+    double d = edge0.dot( v0 );
+    double e = edge1.dot( v0 );
 
-    float det = a*c - b*b;
-    float s = b*e - c*d;
-    float t = b*d - a*e;
+    double det = a*c - b*b;
+    double s = b*e - c*d;
+    double t = b*d - a*e;
 
     if ( s + t < det )
     {
-        if ( s < 0.f )
+        if ( s < 0. )
         {
-            if ( t < 0.f )
+            if ( t < 0. )
             {
-                if ( d < 0.f )
+                if ( d < 0. )
                 {
-                    s = min(-d/a , 1.f);
-                    s = max(-d/a , 0.f);
+                    s = min(-d/a , 1.);
+                    s = max(-d/a , 0.);
                     t = 0.f;
                 }
                 else
                 {
-                    s = 0.f;
-                    t = max( -e/c, 0.f);
-                    t = min( -e/c, 1.f);
+                    s = 0.;
+                    t = max( -e/c, 0.);
+                    t = min( -e/c, 1.);
                 }
             }
             else
             {
-                s = 0.f;
-                t = max( -e/c, 0.f);
-                t = min(-e/c, 1.f);
+                s = 0.;
+                t = max( -e/c, 0.);
+                t = min(-e/c, 1.);
             }
         }
         else if ( t < 0.f )
         {
-            s = min(-d/a , 1.f);
-            s = max(-d/a , 0.f);
+            s = min(-d/a , 1.);
+            s = max(-d/a , 0.);
             t = 0.f;
         }
         else
         {
-            float invDet = 1.f / det;
+            double invDet = 1. / det;
             s *= invDet;
             t *= invDet;
         }
     }
     else
     {
-        if ( s < 0.f )
+        if ( s < 0. )
         {
-            float tmp0 = b+d;
-            float tmp1 = c+e;
+            double tmp0 = b+d;
+            double tmp1 = c+e;
             if ( tmp1 > tmp0 )
             {
-                float numer = tmp1 - tmp0;
-                float denom = a-2*b+c;
-                s = min( numer/denom, 1.f);
-                s = max(numer/denom,0.f);
+                double numer = tmp1 - tmp0;
+                double denom = a-2*b+c;
+                s = min( numer/denom, 1.);
+                s = max(numer/denom,0.);
                 t = 1-s;
             }
             else
             {
-                t = min(-e/c, 1.f );
-                t = max(-e/c, 0.f );
-                s = 0.f;
+                t = min(-e/c, 1. );
+                t = max(-e/c, 0. );
+                s = 0.;
             }
         }
-        else if ( t < 0.f )
+        else if ( t < 0. )
         {
             if ( a+d > b+e )
             {
-                float numer = c+e-b-d;
-                float denom = a-2*b+c;
-                s = min( numer/denom, 1.f);
-                s = max(numer/denom,0.f);
+                double numer = c+e-b-d;
+                double denom = a-2*b+c;
+                s = min( numer/denom, 1.);
+                s = max(numer/denom,0.);
                 t = 1-s;
             }
             else
             {
-                s = min( -e/c, 1.f );
-                s = max(-e/c, 0.f);
-                t = 0.f;
+                s = min( -e/c, 1. );
+                s = max(-e/c, 0. );
+                t = 0.;
             }
         }
         else
         {
-            float numer = c+e-b-d;
-            float denom = a-2*b+c;
-            s = min( numer/denom, 1.f);
-            s = max(numer/denom,0.f);
-            t = 1.f - s;
+            double numer = c+e-b-d;
+            double denom = a-2*b+c;
+            s = min( numer/denom, 1.);
+            s = max(numer/denom,0.);
+            t = 1. - s;
         }
     }
 
@@ -134,7 +134,7 @@ static void Barycentric(double out[3], const Vector3d& A, const Vector3d& B, con
     Vector3d QA = A - Q;
     Vector3d QB = B - Q;
 
-    float divisor = AB.dot(AB);
+    double divisor = AB.dot(AB);
 
     out[0] = QB.dot(AB);
     out[1] = -QA.dot(AB);
@@ -206,12 +206,12 @@ bool SolvePoint(const Vector3d& A, const Vector3d& B, const Vector3d& C, const V
 
     // This is used to help testing if the face degenerates
     // into an edge.
-    float area = wABC[3];
+    double area = wABC[3];
 
     // R AB
     if (wAB[0] > 0.0f && wAB[1] > 0.0f && area * wABC[2] <= 0.0f)
     {
-        float s = wAB[2];
+        double s = wAB[2];
         assert(s > 0.0f);
         p = (wAB[0] * A + wAB[1] * B) / s;
         return 1;
@@ -220,7 +220,7 @@ bool SolvePoint(const Vector3d& A, const Vector3d& B, const Vector3d& C, const V
     // R BC
     if (wBC[0] > 0.0f && wBC[1] > 0.0f && area * wABC[0] <= 0.0f)
     {
-        float s = wBC[2];
+        double s = wBC[2];
         assert(s > 0.0f);
         p = (wBC[0] * B + wBC[1] * C) / s;
         return 1;
@@ -229,14 +229,14 @@ bool SolvePoint(const Vector3d& A, const Vector3d& B, const Vector3d& C, const V
     // R CA
     if (wCA[0] > 0.0f && wCA[1] > 0.0f && area * wABC[1] <= 0.0f)
     {
-        float s = wCA[2];
+        double s = wCA[2];
         assert(s > 0.0f);
         p = (wCA[0] * C + wCA[1] * A) / s;
         return 1;
     }
 
     // R ABC/ACB
-    float s = wABC[3];
+    double s = wABC[3];
     if (s <= 0.0f)
     {
         // Give up. Triangle is degenerate.
@@ -284,7 +284,7 @@ int* CTCD::broadPhase(const toolObject* tool, const meshObject* obj)
 
     auto tool_radius = tool->tool_radius;
     auto pos = tool->pos;
-    auto proxy = tool->proxy_pos;
+    auto proxy = tool->last_pos;
 
     // Builds a bounding box for the tool
     aabb* rhs = new aabb;
@@ -292,8 +292,8 @@ int* CTCD::broadPhase(const toolObject* tool, const meshObject* obj)
     // initializes the bounding box
     for (int i = 0 ; i < 3 ; i++)
     {
-        rhs->lower[i] = numeric_limits<float>::infinity();
-        rhs->upper[i] = -numeric_limits<float>::infinity();
+        rhs->lower[i] = numeric_limits<double>::infinity();
+        rhs->upper[i] = -numeric_limits<double>::infinity();
     }
 
     // build the bounding box
@@ -307,8 +307,8 @@ int* CTCD::broadPhase(const toolObject* tool, const meshObject* obj)
 
     // the device pointer
     aabb* drhs;
-    cudaMalloc((void**)&drhs,6*sizeof(float));
-    cudaMemcpy(drhs,rhs,6*sizeof(float),cudaMemcpyHostToDevice);
+    cudaMalloc((void**)&drhs,6*sizeof(double));
+    cudaMemcpy(drhs,rhs,6*sizeof(double),cudaMemcpyHostToDevice);
 
     // the vector containing the possible collisions
     int* dcol;
@@ -318,7 +318,7 @@ int* CTCD::broadPhase(const toolObject* tool, const meshObject* obj)
     // BASICALLY ONLY COMPUTE THE BOUNDING BOX WHEN DYNAMICS ARE DONE
     // build bounding box
     aabb* dlhs;
-    cudaMalloc((void**)&dlhs,6*obj->nfaces*sizeof(float));
+    cudaMalloc((void**)&dlhs,6*obj->nfaces*sizeof(double));
     simple_bounding_box<<<4,1024>>>(dlhs,obj->d_fi,obj->d_xlast,obj->d_x,obj->nfaces);
 
     // computes the lhs
@@ -346,7 +346,7 @@ bool CTCD::narrowPhase(const toolObject* tool, const meshObject* obj, int* poten
 
     // define
     auto pos = tool->pos;
-    auto proxy = tool->proxy_pos;
+    auto proxy = tool->last_pos;
 
     //proxy and goal to vector
     Vector3d q_start(proxy[0],proxy[1],proxy[2]);
@@ -364,29 +364,32 @@ bool CTCD::narrowPhase(const toolObject* tool, const meshObject* obj, int* poten
     auto n_vertices = obj->nvertices;
 
     // host side variables
-    float *h_x_start;
-    h_x_start = (float*)malloc(3*n_vertices*sizeof(float));
+    double *h_x_start;
+    h_x_start = (double*)malloc(3*n_vertices*sizeof(double));
 
-    float *h_x_end;
-    h_x_end = (float*)malloc(3*n_vertices*sizeof(float));
+    double *h_x_end;
+    h_x_end = (double*)malloc(3*n_vertices*sizeof(double));
 
-    float *h_normal_start;
-    h_normal_start = (float*)malloc(3*n_triangles*sizeof(float));
+    double *h_normal_start;
+    h_normal_start = (double*)malloc(3*n_triangles*sizeof(double));
 
-    float *h_normal_end;
-    h_normal_end = (float*)malloc(3*n_triangles*sizeof(float));
+    double *h_normal_end;
+    h_normal_end = (double*)malloc(3*n_triangles*sizeof(double));
 
     // copy to host
-    cudaMemcpy(h_x_start, d_x_start, 3 * n_vertices * sizeof(float), cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_x_end, d_x_end, 3 * n_vertices * sizeof(float), cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_normal_start, d_normal_start, 3 * n_triangles * sizeof(float), cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_normal_end, d_normal_end, 3 * n_triangles * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_x_start, d_x_start, 3 * n_vertices * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_x_end, d_x_end, 3 * n_vertices * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_normal_start, d_normal_start, 3 * n_triangles * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_normal_end, d_normal_end, 3 * n_triangles * sizeof(double), cudaMemcpyDeviceToHost);
 
     // transfer device side to
     for (int idx = 0; idx < n_triangles; idx++) {
 
         if (potential_collisions[idx] != 0)
         {
+            cout << " Start: " << endl;
+            cout << pos[0] << " , " << pos[1] << " , " << pos[2] << endl;
+            cout << proxy[0] << " , " << proxy[1] << " , " << proxy[2] << endl;
 
             // define collision info
             Vector3i f(h_fi[3 * idx + 0], h_fi[3 * idx + 1], h_fi[3 * idx + 2]);
@@ -401,16 +404,6 @@ bool CTCD::narrowPhase(const toolObject* tool, const meshObject* obj, int* poten
             Vector3d normal_end(-h_normal_end[3*idx+0],-h_normal_end[3*idx+1],-h_normal_end[3*idx+2]);
             normal_end = normal_end.normalized();
 
-            //cout << "Start" << endl;
-            //cout << q_start.transpose() << endl;
-            //cout << q_end.transpose() << endl << endl;
-            //cout << a_start.transpose() << endl;
-            //cout << b_start.transpose() << endl;
-            //cout << c_start.transpose() << endl << endl;
-            //cout << a_end.transpose() << endl;
-            //cout << b_end.transpose() << endl;
-            //cout << c_end.transpose() << endl<< endl << endl;
-
             // time of collision
             double t_;
 
@@ -423,9 +416,10 @@ bool CTCD::narrowPhase(const toolObject* tool, const meshObject* obj, int* poten
                 end[0] = a_end; end[1] = b_end; end[2] = c_end;
                 normal[0] = normal_start; normal[1] = normal_end;
                 col_info.emplace_back(new ColInfo(t_,idx,start,end,normal));
+                cout << t_ << endl  << flush;
                 ret = 1;
             }
-
+            cout << "end" << endl;
             if (col_info.size() > 0)
             {
                 // sort the struct
@@ -754,7 +748,7 @@ bool CTCD::edgeEdgeCTCD(const Vector3d &q0start,
 
     // check intervals for overlap
     bool col = false;
-    double mint = 1.0;
+    double mint = numeric_limits<double>::infinity();
     for (int i = 0; i < (int) coplane.size(); i++)
     {
         for (int j = 0; j < (int) a0.size(); j++)

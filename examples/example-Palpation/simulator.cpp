@@ -84,7 +84,7 @@ void meshObject::createTetrahedralMesh(float scale)
     tetgenio input;
 
     // TetGen switches
-    char TETGEN_SWITCHES[] = "pq1.414a0.002";
+    char TETGEN_SWITCHES[] = "pq1.414a0.0002";
 
     if (input.load_off("/home/agalvan-admin/CLionProjects/CUDAIsFun/resources/cylinder.off")) {
         // use TetGen to tetrahedralize our mesh

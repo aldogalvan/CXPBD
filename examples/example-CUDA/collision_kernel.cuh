@@ -1,7 +1,7 @@
 #include "collision.h"
 
 // brute force bounding box
-__global__ void simple_bounding_box(aabb* aabbs, int* f, float* start, float* end, int ntris)
+__global__ void simple_bounding_box(aabb* aabbs, int* f, double* start, double* end, int ntris)
 {
 
     int globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
